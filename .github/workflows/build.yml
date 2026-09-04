@@ -27,10 +27,29 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Build release APK
+      - name: Run unit tests and build release APK
         run: |
           chmod +x ./gradlew
-          ./gradlew assembleRelease --no-daemon --stacktrace
+          ./gradlew testDebugUnitTest assembleRelease --no-daemon --stacktrace
+
+      - name: Verify tests and APK manifest with aapt
+        run: |
+          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          APK=app/build/outputs/apk/release/app-release.apk
+          echo "== Unit test results =="
+          ls app/build/test-results/testDebugUnitTest/*.xml
+          echo "== Badging =="
+          "$BT/aapt" dump badging "$APK" | grep -E "package:|launchable-activity|sdkVersion|targetSdkVersion"
+          echo "== Service registration =="
+          "$BT/aapt" dump xmltree "$APK" AndroidManifest.xml | grep -B1 -A10 "^      E: service " | head -20
+          echo "== APK size =="
+          ls -l "$APK"
+          sha256sum "$APK"
+
+      - name: Verify APK signature is valid
+        run: |
+          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          "$BT/apksigner" verify --print-certs app/build/outputs/apk/release/app-release.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -60,7 +79,11 @@ jobs:
             - Privacy protections: no permissions (except vibration), encrypted
               clipboard memory with auto-clear, opt-in learning, no network use
             - Low-RAM friendly, Android 8 (API 26) and above
+            - Launch screen with step-by-step keyboard enable instructions and a
+              direct link to Android keyboard settings
           files: |
             app/build/outputs/apk/release/app-release.apk
           generate_release_notes: true
           fail_on_unmatched_files: true
+          overwrite: true
+          update_files: true

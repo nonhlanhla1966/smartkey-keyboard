@@ -1,5 +1,6 @@
 package com.smartkey.keyboard
 
+import java.util.Locale
 import java.util.Stack
 
 class CalculatorEngine {
@@ -32,7 +33,7 @@ class CalculatorEngine {
         if (v == Math.floor(v) && !v.isInfinite() && Math.abs(v) < 1e15) {
             return v.toLong().toString()
         }
-        val s = "%.10f".format(v)
+        val s = String.format(Locale.US, "%.10f", v)
         var t = s
         while (t.endsWith("0")) t = t.dropLast(1)
         if (t.endsWith(".")) t = t.dropLast(1)

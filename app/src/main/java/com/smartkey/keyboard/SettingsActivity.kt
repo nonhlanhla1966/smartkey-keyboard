@@ -1,6 +1,8 @@
 package com.smartkey.keyboard
 
+import android.content.Intent
 import android.os.Bundle
+import android.provider.Settings
 import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.Button
@@ -9,6 +11,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.button.MaterialButton
 
 class SettingsActivity : AppCompatActivity() {
 
@@ -31,6 +34,15 @@ class SettingsActivity : AppCompatActivity() {
         val switchClipboard = findViewById<MaterialSwitch>(R.id.switch_clipboard)
         val spinnerHours = findViewById<Spinner>(R.id.spinner_clipboard_hours)
         val btnClear = findViewById<Button>(R.id.btn_clear_learning)
+        val btnKeyboardSettings = findViewById<MaterialButton>(R.id.btn_open_keyboard_settings)
+
+        btnKeyboardSettings.setOnClickListener {
+            try {
+                startActivity(Intent(Settings.ACTION_INPUT_METHOD_SETTINGS))
+            } catch (e: Exception) {
+                Toast.makeText(this, "Open System Settings → Languages & input", Toast.LENGTH_LONG).show()
+            }
+        }
 
         switchHaptics.isChecked = prefs.getBoolean(SmartPrefs.KEY_HAPTICS, true)
         switchSounds.isChecked = prefs.getBoolean(SmartPrefs.KEY_SOUNDS, true)

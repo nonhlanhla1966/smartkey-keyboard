@@ -5,6 +5,10 @@
     <string name="subtype_qwerty">QWERTY</string>
 
     <string name="settings_title">SmartKey Keyboard Settings</string>
+    <string name="enable_header">Enable SmartKey Keyboard</string>
+    <string name="enable_subtitle">SmartKey is installed. Activate it in Android settings to start typing.</string>
+    <string name="btn_open_keyboard_settings">Open keyboard settings</string>
+    <string name="enable_steps">1. Tap the button above (or open System Settings → System → Languages &amp; input → On-screen keyboard).\n2. Tap \u201cSmartKey Keyboard\u201d.\n3. Toggle it on and confirm, then choose it as your default keyboard.\n4. Open any text field \u2014 if another keyboard appears, tap the keyboard icon in the status bar to switch to SmartKey.</string>
     <string name="settings_feedback">Feedback</string>
     <string name="setting_haptics">Haptic feedback</string>
     <string name="setting_sounds">Key press sounds</string>
