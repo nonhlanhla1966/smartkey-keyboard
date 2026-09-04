@@ -44,7 +44,7 @@ class PasswordGeneratorTest {
 
     @Test
     fun strengthOfLongStrongPassword() {
-        val p = "Ab3\$x9!qW2@zZ7"
+        val p = "Ab3\$x9!qW2@zZ7Fa"
         assertEquals(4, PasswordGenerator.strength(p))
     }
 

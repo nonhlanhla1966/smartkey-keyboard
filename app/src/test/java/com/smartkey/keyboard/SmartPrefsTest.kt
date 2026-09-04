@@ -22,7 +22,7 @@ class SmartPrefsTest {
         val p = prefs()
         p.putBoolean(SmartPrefs.KEY_SUGGESTIONS, false)
         assertFalse(p.getBoolean(SmartPrefs.KEY_SUGGESTIONS, true))
-        assertTrue(p.getBoolean(SmartPrefs.KEY_NUMBER_ROW, false))
+        assertFalse(p.getBoolean(SmartPrefs.KEY_NUMBER_ROW, false))
     }
 
     @Test

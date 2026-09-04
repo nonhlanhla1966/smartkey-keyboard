@@ -42,6 +42,7 @@ class CalculatorEngine {
             val result = evalExpression(expression)
             val formatted = format(result)
             record(expression, formatted)
+            expression = ""
             formatted
         } catch (e: Exception) {
             expression
@@ -110,14 +111,15 @@ class CalculatorEngine {
                 if (ops.isNotEmpty() && ops.peek() == '(') ops.pop()
                 expectUnary = false
             } else if (first == '%') {
-                if (ops.isNotEmpty() && (ops.peek() == '*' || ops.peek() == '/' || ops.peek() == '^' || ops.peek() == 'u' || ops.peek() == 'r')) {
+                // Postfix percent: divide the last operand by 100 so that
+                // "200*15%" evaluates as 200 * 0.15 and "10%" as 0.1.
+                if (output.isNotEmpty() && output.last() is Double) {
+                    val last = output.size - 1
+                    output[last] = (output[last] as Double) / 100.0
+                } else {
                     output.add(0.01)
-                    expectUnary = false
-                } else if (output.isNotEmpty()) {
-                    val top = output.removeAt(output.size - 1) as Double
-                    output.add(top / 100.0)
-                    expectUnary = false
                 }
+                expectUnary = false
             } else {
                 var op = first
                 val isUnary = expectUnary && (op == '-' || op == '+')

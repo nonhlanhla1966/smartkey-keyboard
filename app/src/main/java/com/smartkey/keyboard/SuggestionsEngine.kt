@@ -193,10 +193,9 @@ class SuggestionsEngine(private val prefs: SmartPrefs) {
     fun shouldCapitalize(prefix: String): Boolean {
         val p = prefix.trim()
         if (p.isEmpty()) return true
-        if (p.endsWith(". ") || p.endsWith("! ") || p.endsWith("? ")) return true
-        if (p.endsWith(".\n") || p.endsWith("!\n") || p.endsWith("?\n")) return true
-        if (p.endsWith("\n")) return true
-        return false
+        if (prefix.endsWith("\n")) return true
+        val last = p.lastOrNull()
+        return last == '.' || last == '!' || last == '?' || last == '\n'
     }
 }
 
