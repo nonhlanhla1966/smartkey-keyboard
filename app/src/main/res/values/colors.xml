@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="primary">#0A84FF</color>
+    <color name="primary_dark">#0060DF</color>
+    <color name="secondary">#30D158</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="launcher_bg">#0A84FF</color>
+</resources>

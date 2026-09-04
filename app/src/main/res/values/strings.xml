@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SmartKey Keyboard</string>
+    <string name="ime_name">SmartKey Keyboard</string>
+    <string name="subtype_qwerty">QWERTY</string>
+
+    <string name="settings_title">SmartKey Keyboard Settings</string>
+    <string name="settings_feedback">Feedback</string>
+    <string name="setting_haptics">Haptic feedback</string>
+    <string name="setting_sounds">Key press sounds</string>
+    <string name="setting_theme">Theme</string>
+    <string name="setting_theme_dark">Dark</string>
+    <string name="setting_theme_light">Light</string>
+    <string name="setting_theme_blue">Blue</string>
+    <string name="setting_theme_green">Green</string>
+    <string name="setting_theme_purple">Purple</string>
+    <string name="setting_theme_orange">Orange</string>
+    <string name="setting_theme_teal">Teal</string>
+    <string name="setting_theme_pink">Pink</string>
+
+    <string name="setting_typing">Typing help</string>
+    <string name="setting_suggestions">Word suggestions</string>
+    <string name="setting_autocap">Auto-capitalize sentences</string>
+    <string name="setting_learning">Learn from typing</string>
+
+    <string name="setting_privacy">Privacy</string>
+    <string name="setting_privacy_learn">Tapping makes typing smarter only on this device. No data leaves your phone.</string>
+    <string name="setting_privacy_clear">Clear learned words</string>
+    <string name="setting_privacy_clear_done">Learned words cleared</string>
+    <string name="setting_clipboard">Clipboard memory</string>
+    <string name="setting_clipboard_desc">Safe clipboard history. Enable to remember copies.</string>
+    <string name="setting_clipboard_hours">Auto-clear copies after (hours)</string>
+    <string name="btn_clear">Clear</string>
+
+    <string name="suggestion_more">&#8230;</string>
+    <string name="key_shift">Shift</string>
+    <string name="key_backspace">Backspace</string>
+    <string name="key_enter">Enter</string>
+    <string name="key_space">Space</string>
+    <string name="key_numbers">?123</string>
+    <string name="key_letters">ABC</string>
+    <string name="key_symbols">=+\#&lt;</string>
+    <string name="key_emoji">Emoji</string>
+    <string name="key_calc">Calc</string>
+    <string name="key_clipboard">Clipboard</string>
+    <string name="key_tools">Tools</string>
+    <string name="key_hide">Hide keyboard</string>
+    <string name="clipboard_title">Clipboard</string>
+    <string name="clipboard_empty">No copied items yet</string>
+    <string name="tools_title">Smart tools</string>
+    <string name="tools_quick">Quick text</string>
+    <string name="tools_case">Text case</string>
+    <string name="tools_uppercase">UPPERCASE</string>
+    <string name="tools_lowercase">lowercase</string>
+    <string name="tools_capitalize">Capitalized</string>
+    <string name="tools_reset">Normal</string>
+    <string name="tools_copy_all">Copy selection</string>
+    <string name="text_email">email@example.com</string>
+    <string name="text_phone">+1 555 0123</string>
+    <string name="text_home">123 Street, City</string>
+    <string name="text_url">https://www.example.com</string>
+    <string name="text_smile">:-)</string>
+    <string name="text_ok">OK</string>
+
+    <string name="calc_display_hint">0</string>
+    <string name="calc_send">Insert result</string>
+</resources>

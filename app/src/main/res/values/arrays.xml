@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="themes">
+        <item>@string/setting_theme_light</item>
+        <item>@string/setting_theme_dark</item>
+        <item>@string/setting_theme_blue</item>
+        <item>@string/setting_theme_green</item>
+        <item>@string/setting_theme_purple</item>
+        <item>@string/setting_theme_orange</item>
+        <item>@string/setting_theme_teal</item>
+        <item>@string/setting_theme_pink</item>
+    </string-array>
+    <string-array name="clipboard_hours">
+        <item>1</item>
+        <item>6</item>
+        <item>12</item>
+        <item>24</item>
+        <item>72</item>
+    </string-array>
+</resources>
