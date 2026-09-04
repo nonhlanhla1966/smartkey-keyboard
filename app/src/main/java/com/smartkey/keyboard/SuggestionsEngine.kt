@@ -1,6 +1,7 @@
 package com.smartkey.keyboard
 
 import android.content.Context
+import java.util.Base64
 
 class SmartPrefs(context: Context) {
     val prefs = context.getSharedPreferences("smartkey", Context.MODE_PRIVATE)
@@ -145,18 +146,21 @@ class SuggestionsEngine(private val prefs: SmartPrefs) {
 }
 
 object XORCipher {
+    private val encoder = Base64.getEncoder()
+    private val decoder = Base64.getDecoder()
+
     fun encrypt(s: String, key: String): String {
-        val k = key.toByteArray()
+        val k = key.toByteArray(Charsets.UTF_8)
         val bytes = s.toByteArray(Charsets.UTF_8)
         val out = ByteArray(bytes.size)
         for (i in bytes.indices) out[i] = (bytes[i].toInt() xor k[i % k.size].toInt()).toByte()
-        return android.util.Base64.encodeToString(out, android.util.Base64.NO_WRAP)
+        return encoder.encodeToString(out)
     }
 
     fun decrypt(s: String, key: String): String {
         return try {
-            val k = key.toByteArray()
-            val bytes = android.util.Base64.decode(s, android.util.Base64.NO_WRAP)
+            val k = key.toByteArray(Charsets.UTF_8)
+            val bytes = decoder.decode(s)
             val out = ByteArray(bytes.size)
             for (i in bytes.indices) out[i] = (bytes[i].toInt() xor k[i % k.size].toInt()).toByte()
             String(out, Charsets.UTF_8)
