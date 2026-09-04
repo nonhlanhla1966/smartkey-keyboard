@@ -85,5 +85,4 @@ jobs:
             app/build/outputs/apk/release/app-release.apk
           generate_release_notes: true
           fail_on_unmatched_files: true
-          overwrite: true
-          update_files: true
+          overwrite_files: true
