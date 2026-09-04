@@ -9,8 +9,63 @@ class SmartClipboard(context: Context, prefs: SmartPrefs) {
     private val prefs = prefs
     private val key = "smartkey-clip"
     private var lastAutosaved = 0L
+    private var unlocked = false
+
+    data class ClipItem(
+        val text: String,
+        val timestamp: Long,
+        val pinned: Boolean = false,
+        val name: String? = null
+    ) {
+        val displayName: String get() = name ?: text
+    }
 
     fun isEnabled(): Boolean = prefs.getBoolean(SmartPrefs.KEY_CLIPBOARD_ENABLED, false)
+
+    // ---- Password protection ----
+
+    fun hasPassword(): Boolean {
+        val pin = prefs.getString(SmartPrefs.KEY_CLIPBOARD_PIN) ?: ""
+        return pin.isNotEmpty()
+    }
+
+    fun setPassword(pin: String) {
+        if (pin.isEmpty()) {
+            prefs.remove(SmartPrefs.KEY_CLIPBOARD_PIN)
+            unlocked = true
+        } else {
+            prefs.putString(SmartPrefs.KEY_CLIPBOARD_PIN, secureHash(pin))
+            unlocked = true
+        }
+    }
+
+    fun verifyPin(pin: String): Boolean {
+        val expected = prefs.getString(SmartPrefs.KEY_CLIPBOARD_PIN) ?: ""
+        if (expected.isEmpty()) return true
+        unlocked = secureHash(pin) == expected
+        return unlocked
+    }
+
+    fun lock() {
+        unlocked = false
+    }
+
+    fun isUnlocked(): Boolean = unlocked || !hasPassword()
+
+    private fun secureHash(s: String): String {
+        if (s.isEmpty()) return ""
+        return try {
+            val md = java.security.MessageDigest.getInstance("SHA-256")
+            val bytes = md.digest(("smartkey-pin-salt" + s).toByteArray(Charsets.UTF_8))
+            val sb = StringBuilder(bytes.size * 2)
+            for (b in bytes) sb.append(String.format(java.util.Locale.US, "%02x", b.toInt() and 0xFF))
+            sb.toString()
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
+    // ---- System clipboard bridge ----
 
     fun systemText(): String? {
         val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -42,63 +97,63 @@ class SmartClipboard(context: Context, prefs: SmartPrefs) {
         push(text)
     }
 
+    // ---- History storage (delegates to ClipboardStore) ----
+
     fun push(text: String) {
         if (!isEnabled()) return
-        val list = items().toMutableList()
-        val existing = list.indexOfFirst { it.text == text }
-        if (existing >= 0) list.removeAt(existing)
-        list.add(0, ClipItem(text, System.currentTimeMillis()))
-        while (list.size > 40) list.removeAt(list.size - 1)
-        save(list)
+        val items = storeItems().toMutableList()
+        val updated = ClipboardStore.push(items, text, System.currentTimeMillis())
+        save(updated)
     }
 
-    fun items(): List<ClipItem> {
-        val raw = prefs.getString(SmartPrefs.KEY_CLIPBOARD_ENABLED + "_list") ?: return emptyList()
-        val decrypted = XORCipher.decrypt(raw, key)
-        val out = ArrayList<ClipItem>()
-        for (part in decrypted.split("\n")) {
-            if (part.isBlank()) continue
-            val idx = part.lastIndexOf(':')
-            if (idx > 0) {
-                val t = part.substring(0, idx)
-                val ts = part.substring(idx + 1).toLongOrNull() ?: System.currentTimeMillis()
-                if (t.isNotBlank()) out.add(ClipItem(t, ts))
-            }
-        }
-        return prune(out)
+    fun items(): List<ClipItem> = rawItems().map { toItem(it) }.let { list ->
+        ClipboardStore.sorted(list.map { fromItem(it) }).map { toItem(it) }
     }
 
-    private fun prune(list: List<ClipItem>): List<ClipItem> {
-        val hours = prefs.getInt(SmartPrefs.KEY_CLIPBOARD_HOURS, 12).toLong()
-        val cutoff = System.currentTimeMillis() - hours * 3600_000L
-        return list.filter { it.timestamp >= cutoff }
+    fun search(query: String): List<ClipItem> {
+        return ClipboardStore.search(items().map { fromItem(it) }, query).map { toItem(it) }
     }
 
-    fun setItems(list: List<ClipItem>) {
-        val sb = StringBuilder()
-        for (item in list) {
-            sb.append(item.text.replace('\n', ' ')).append(':').append(item.timestamp).append('\n')
-        }
-        prefs.putString(SmartPrefs.KEY_CLIPBOARD_ENABLED + "_list", XORCipher.encrypt(sb.toString(), key))
+    fun togglePin(item: ClipItem) {
+        save(ClipboardStore.togglePin(rawItems().map { fromItem(it) }, item.text).map { toItem(it) })
     }
 
-    private fun save(list: List<ClipItem>) {
-        val sb = StringBuilder()
-        for (item in list) {
-            sb.append(item.text.replace('\n', ' ')).append(':').append(item.timestamp).append('\n')
-        }
-        prefs.putString(SmartPrefs.KEY_CLIPBOARD_ENABLED + "_list", XORCipher.encrypt(sb.toString(), key))
+    fun rename(item: ClipItem, newName: String) {
+        save(ClipboardStore.rename(rawItems().map { fromItem(it) }, item.text, newName.orEmpty()).map { toItem(it) })
     }
 
     fun delete(item: ClipItem) {
-        val list = items().toMutableList()
-        list.remove(item)
-        save(list)
+        save(ClipboardStore.delete(rawItems().map { fromItem(it) }, item.text).map { toItem(it) })
     }
 
     fun clearAll() {
         prefs.remove(SmartPrefs.KEY_CLIPBOARD_ENABLED + "_list")
     }
 
-    data class ClipItem(val text: String, val timestamp: Long)
+    private fun fromItem(it: ClipItem) = ClipboardStore.Item(it.text, it.timestamp, it.pinned, it.name)
+    private fun toItem(it: ClipboardStore.Item) = ClipItem(it.text, it.timestamp, it.pinned, it.name)
+
+    private fun storeItems(): List<ClipboardStore.Item> = rawStoreItems()
+
+    private fun rawStoreItems(): List<ClipboardStore.Item> {
+        val raw = prefs.getString(SmartPrefs.KEY_CLIPBOARD_ENABLED + "_list") ?: return emptyList()
+        val decrypted = XORCipher.decrypt(raw, key)
+        val parsed = ClipboardStore.parse(decrypted)
+        val now = System.currentTimeMillis()
+        val hours = prefs.getInt(SmartPrefs.KEY_CLIPBOARD_HOURS, 12).toLong()
+        return ClipboardStore.sorted(ClipboardStore.prune(parsed, hours, now))
+    }
+
+    private fun rawItems(): List<ClipItem> = rawStoreItems().map { toItem(it) }
+
+    private fun save(list: List<ClipItem>) {
+        val storageList = list.map { fromItem(it) }
+        val serialized = ClipboardStore.serialize(ClipboardStore.sorted(storageList))
+        val encrypted = XORCipher.encrypt(serialized, key)
+        if (encrypted.isEmpty()) {
+            prefs.remove(SmartPrefs.KEY_CLIPBOARD_ENABLED + "_list")
+        } else {
+            prefs.putString(SmartPrefs.KEY_CLIPBOARD_ENABLED + "_list", encrypted)
+        }
+    }
 }

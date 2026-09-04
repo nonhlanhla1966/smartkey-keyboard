@@ -43,6 +43,7 @@ class SmartKeyIME : InputMethodService(), KeyboardListener {
         view.listener = this
         view.theme = ThemeConfig.byName(prefs.getString(SmartPrefs.KEY_THEME) ?: ThemeConfig.KEY_LIGHT)
         keyboardView = view
+        applyPrefsToView()
         applyModeToView(view)
         return view
     }
@@ -56,7 +57,9 @@ class SmartKeyIME : InputMethodService(), KeyboardListener {
         keyboardView?.let {
             it.theme = ThemeConfig.byName(prefs.getString(SmartPrefs.KEY_THEME) ?: ThemeConfig.KEY_LIGHT)
             it.typedPrefix = ""
+            applyPrefsToView()
             applyModeToView(it)
+            switchMode(defaultModeFor(editorInfo))
         }
         val before = currentInputConnection?.getTextBeforeCursor(300, 0)?.toString() ?: ""
         capitalizeNext = suggestions.shouldCapitalize(before)
@@ -102,19 +105,28 @@ class SmartKeyIME : InputMethodService(), KeyboardListener {
 
     override fun onKey(spec: KeySpec) {
         feedback()
-        clipboard.capture()
+        if (!privateMode) clipboard.capture()
         when (spec.kind) {
             KeyKind.CHAR -> onCharKey(spec.text)
             KeyKind.SHIFT -> onShiftKey()
             KeyKind.BACKSPACE -> onBackspace()
             KeyKind.SPACE -> onSpace()
             KeyKind.ENTER -> onEnter()
+            KeyKind.NEWLINE -> {
+                currentInputConnection?.commitText("\n", 1)
+                capitalizeNext = true
+                updateViewShift()
+                updateCandidates()
+            }
             KeyKind.MODE_LETTERS -> switchMode(KeyboardLayout.MODE_LETTERS)
             KeyKind.MODE_SYMBOLS_1 -> switchMode(KeyboardLayout.MODE_SYMBOLS_1)
             KeyKind.MODE_SYMBOLS_2 -> switchMode(KeyboardLayout.MODE_SYMBOLS_2)
             KeyKind.MODE_EMOJI -> switchMode(KeyboardLayout.MODE_EMOJI)
             KeyKind.MODE_CALC -> switchMode(KeyboardLayout.MODE_CALC)
             KeyKind.EMOJI -> onEmoji(spec.text)
+            KeyKind.EMOJI_PREV -> keyboardView?.pageEmoji(-1)
+            KeyKind.EMOJI_NEXT -> keyboardView?.pageEmoji(1)
+            KeyKind.EMOJI_CATEGORY -> keyboardView?.setEmojiCategory(EmojiData.categoryIndexOf(spec.text))
             KeyKind.CLIPBOARD -> showClipboardPanel()
             KeyKind.TOOLS -> showToolsPanel()
             KeyKind.SETTINGS -> openSettings()
@@ -123,8 +135,103 @@ class SmartKeyIME : InputMethodService(), KeyboardListener {
             KeyKind.CALC_BSP -> calcBackspace()
             KeyKind.CALC_EQUALS -> calcEquals()
             KeyKind.CALC_OP -> calcOp(spec.text)
+            KeyKind.CALC_HISTORY -> calcHistoryNext()
+            KeyKind.CURSOR_LEFT -> sendKey(KeyEvent.KEYCODE_DPAD_LEFT)
+            KeyKind.CURSOR_RIGHT -> sendKey(KeyEvent.KEYCODE_DPAD_RIGHT)
+            KeyKind.CURSOR_HOME -> sendKey(KeyEvent.KEYCODE_MOVE_HOME)
+            KeyKind.CURSOR_END -> sendKey(KeyEvent.KEYCODE_MOVE_END)
+            KeyKind.COPY -> copySelected()
+            KeyKind.CUT -> cutSelected()
+            KeyKind.PASTE -> pasteFromSystemClipboard()
+            KeyKind.SELECT_ALL -> selectAll()
+            KeyKind.UNDO -> runContextAction(android.R.id.undo)
+            KeyKind.REDO -> runContextAction(android.R.id.redo)
             else -> Unit
         }
+    }
+
+    private fun applyPrefsToView() {
+        val view = keyboardView ?: return
+        view.numberRowEnabled = prefs.getBoolean(SmartPrefs.KEY_NUMBER_ROW, false)
+        view.oneHandedSide = prefs.getInt(SmartPrefs.KEY_ONE_HANDED, 0)
+        view.keyHeightMult = when (prefs.getString(SmartPrefs.KEY_KEY_HEIGHT)) {
+            "small" -> 0.8f
+            "large" -> 1.15f
+            else -> 1f
+        }
+    }
+
+    /**
+     * Pick the starting keyboard mode based on the editor's input type so the
+     * keyboard adapts to number-only, phone, URL, email and datetime fields.
+     */
+    private fun defaultModeFor(info: EditorInfo): Int {
+        val type = info.inputType
+        if (privateMode) return KeyboardLayout.MODE_LETTERS
+        val cls = type and InputType.TYPE_MASK_CLASS
+        return when (cls) {
+            InputType.TYPE_CLASS_NUMBER, InputType.TYPE_CLASS_PHONE, InputType.TYPE_CLASS_DATETIME ->
+                KeyboardLayout.MODE_SYMBOLS_1
+            else -> KeyboardLayout.MODE_LETTERS
+        }
+    }
+
+    private fun sendKey(code: Int) {
+        val ic = currentInputConnection ?: return
+        ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, code))
+        ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, code))
+    }
+
+    private fun runContextAction(id: Int) {
+        currentInputConnection?.performContextMenuAction(id)
+    }
+
+    private fun selectAll() {
+        val ic = currentInputConnection ?: return
+        ic.performContextMenuAction(android.R.id.selectAll)
+    }
+
+    private fun copySelected() {
+        val ic = currentInputConnection ?: return
+        val sel = ic.getSelectedText(0)?.toString()
+        if (!sel.isNullOrEmpty()) {
+            clipboard.copy(sel)
+            clipboard.push(sel)
+        } else {
+            val word = lastWordBeforeCursor()
+            if (word != null) {
+                clipboard.copy(word)
+                clipboard.push(word)
+            }
+        }
+    }
+
+    private fun cutSelected() {
+        val ic = currentInputConnection ?: return
+        val sel = ic.getSelectedText(0)?.toString()
+        if (sel.isNullOrEmpty()) {
+            val word = lastWordBeforeCursor() ?: return
+            ic.deleteSurroundingText(word.length, 0)
+            clipboard.copy(word)
+            clipboard.push(word)
+            return
+        }
+        ic.commitText("", 1)
+        clipboard.copy(sel)
+        clipboard.push(sel)
+    }
+
+    private fun pasteFromSystemClipboard() {
+        val ic = currentInputConnection ?: return
+        val text = clipboard.systemText() ?: return
+        ic.commitText(text, 1)
+        clipboard.push(text)
+    }
+
+    private fun calcHistoryNext() {
+        if (!calculator.hasHistory) return
+        val entry = calculator.recallHistory(0)
+        keyboardView?.invalidate()
     }
 
     private fun onCharKey(text: String) {
@@ -161,6 +268,7 @@ class SmartKeyIME : InputMethodService(), KeyboardListener {
             if (shiftState == 1) shiftState = 0
         } else {
             if (text in listOf(".", "!", "?")) {
+                maybeAutocorrect()
                 commitWordToLearning()
                 capitalizeNext = true
             } else if (!(text.firstOrNull()?.isLetterOrDigit() ?: false)) {
@@ -196,6 +304,7 @@ class SmartKeyIME : InputMethodService(), KeyboardListener {
     }
 
     private fun onSpace() {
+        maybeAutocorrect()
         commitWordToLearning()
         val ic = currentInputConnection ?: return
         val before = ic.getTextBeforeCursor(1, 0)?.toString() ?: ""
@@ -207,7 +316,33 @@ class SmartKeyIME : InputMethodService(), KeyboardListener {
         updateCandidates()
     }
 
+    /**
+     * Basic offline autocorrection: when the word just typed is not in the
+     * dictionary but is within edit distance 2 of a known word, replace it
+     * before the separator is committed. Only touches the buffer we typed, so
+     * user-managed text is never rewritten.
+     */
+    private fun maybeAutocorrect() {
+        if (privateMode) return
+        if (!prefs.getBoolean(SmartPrefs.KEY_AUTOCORRECT, true)) return
+        val ic = currentInputConnection ?: return
+        val typed = wordBuffer.toString()
+        if (typed.length < 3) return
+        val fix = suggestions.correct(typed) ?: return
+        val before = ic.getTextBeforeCursor(typed.length, 0)?.toString()
+        if (before != typed) return
+        ic.beginBatchEdit()
+        try {
+            ic.deleteSurroundingText(typed.length, 0)
+            ic.commitText(fix, 1)
+        } finally {
+            ic.endBatchEdit()
+        }
+        wordBuffer = StringBuilder(fix)
+    }
+
     private fun onEnter() {
+        maybeAutocorrect()
         commitWordToLearning()
         val ic = currentInputConnection ?: return
         val editor = currentInputEditorInfo
@@ -338,8 +473,6 @@ class SmartKeyIME : InputMethodService(), KeyboardListener {
         panel.show(view, onSelect = { text ->
             hidePanels()
             currentInputConnection?.commitText(text, 1)
-        }, onDelete = { item ->
-            clipboard.delete(item)
         })
     }
 

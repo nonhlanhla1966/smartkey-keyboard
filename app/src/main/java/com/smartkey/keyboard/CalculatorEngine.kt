@@ -6,6 +6,12 @@ import java.util.Stack
 class CalculatorEngine {
     var expression = ""
 
+    private val _history = ArrayList<HistoryEntry>()
+    val history: List<HistoryEntry> get() = _history.toList()
+    val hasHistory: Boolean get() = _history.isNotEmpty()
+
+    data class HistoryEntry(val expr: String, val result: String)
+
     fun clear() {
         expression = ""
     }
@@ -19,18 +25,46 @@ class CalculatorEngine {
         if (expression.isNotEmpty()) expression = expression.dropLast(1)
     }
 
+    fun recallHistory(index: Int): HistoryEntry? {
+        if (index < 0 || index >= _history.size) return null
+        val entry = _history[_history.size - 1 - index]
+        expression = entry.result
+        return entry
+    }
+
+    fun clearHistory() {
+        _history.clear()
+    }
+
     fun evaluate(): String {
         if (expression.isBlank()) return "0"
         return try {
-            val result = evaluate(expression.replace("×", "*").replace("÷", "/").replace("−", "-").replace("±", "-"))
-            format(result)
+            val result = evalExpression(expression)
+            val formatted = format(result)
+            record(expression, formatted)
+            formatted
         } catch (e: Exception) {
             expression
         }
     }
 
+    private fun record(expr: String, result: String) {
+        _history.add(HistoryEntry(expr, result))
+        while (_history.size > 50) _history.removeAt(0)
+    }
+
+    private fun evalExpression(input: String): Double {
+        val normalized = input
+            .replace("×", "*")
+            .replace("÷", "/")
+            .replace("−", "-")
+            .replace("±", "-")
+        return evaluate(normalized)
+    }
+
     private fun format(v: Double): String {
-        if (v == Math.floor(v) && !v.isInfinite() && Math.abs(v) < 1e15) {
+        if (!v.isFinite()) return if (v.isNaN()) "Error" else "∞"
+        if (v == Math.floor(v) && Math.abs(v) < 1e15) {
             return v.toLong().toString()
         }
         val s = String.format(Locale.US, "%.10f", v)
@@ -44,7 +78,7 @@ class CalculatorEngine {
 
     fun isValid(): Boolean {
         return try {
-            expression.isNotBlank() && evaluate(expression.replace("×", "*").replace("÷", "/").replace("−", "-").replace("±", "-")).isFinite()
+            expression.isNotBlank() && evalExpression(expression).isFinite()
         } catch (e: Exception) {
             false
         }
@@ -54,7 +88,13 @@ class CalculatorEngine {
         val tokens = tokenize(input)
         val output = mutableListOf<Any>()
         val ops = Stack<Char>()
-        val precedence = mapOf('+' to 1, '-' to 1, '*' to 2, '/' to 2, '%' to 2, 'u' to 3)
+        val precedence = mapOf(
+            '+' to 1, '-' to 1,
+            '*' to 2, '/' to 2, '%' to 2,
+            '^' to 3,
+            'r' to 5,
+            'u' to 6
+        )
         var expectUnary = true
         for (raw in tokens) {
             val t = raw
@@ -70,13 +110,14 @@ class CalculatorEngine {
                 if (ops.isNotEmpty() && ops.peek() == '(') ops.pop()
                 expectUnary = false
             } else if (first == '%') {
-                if (ops.isNotEmpty() && (ops.peek() == '*' || ops.peek() == '/' || ops.peek() == 'u')) {
+                if (ops.isNotEmpty() && (ops.peek() == '*' || ops.peek() == '/' || ops.peek() == '^' || ops.peek() == 'u' || ops.peek() == 'r')) {
                     output.add(0.01)
+                    expectUnary = false
                 } else if (output.isNotEmpty()) {
                     val top = output.removeAt(output.size - 1) as Double
                     output.add(top / 100.0)
+                    expectUnary = false
                 }
-                expectUnary = false
             } else {
                 var op = first
                 val isUnary = expectUnary && (op == '-' || op == '+')
@@ -97,13 +138,24 @@ class CalculatorEngine {
             when (item) {
                 is Double -> stack.push(item)
                 is Char -> {
-                    if (item == 'u') {
-                        val a = stack.pop()
-                        stack.push(-a)
-                    } else {
-                        val b = stack.pop()
-                        val a = stack.pop()
-                        stack.push(apply(a, b, item))
+                    when (item) {
+                        'u' -> {
+                            if (stack.isEmpty()) return Double.NaN
+                            val a = stack.pop()
+                            stack.push(-a)
+                        }
+                        'r' -> {
+                            if (stack.isEmpty()) return Double.NaN
+                            val a = stack.pop()
+                            if (a < 0) return Double.NaN
+                            stack.push(Math.sqrt(a))
+                        }
+                        else -> {
+                            if (stack.size < 2) return Double.NaN
+                            val b = stack.pop()
+                            val a = stack.pop()
+                            stack.push(apply(a, b, item))
+                        }
                     }
                 }
             }
@@ -117,6 +169,7 @@ class CalculatorEngine {
         '*' -> a * b
         '/' -> if (b == 0.0) Double.NaN else a / b
         '%' -> a % b
+        '^' -> Math.pow(a, b)
         else -> a
     }
 
@@ -132,10 +185,11 @@ class CalculatorEngine {
                     sb.clear()
                 }
                 if (c == ' ') continue
-                if (c == '×' || c == '÷' || c == '−') {
-                    tokens.add(c.toString())
-                } else {
-                    tokens.add(c.toString())
+                when (c) {
+                    '√' -> tokens.add("r")
+                    '^' -> tokens.add("^")
+                    '%' -> tokens.add("%")
+                    else -> tokens.add(c.toString())
                 }
             }
         }

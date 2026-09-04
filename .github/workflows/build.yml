@@ -69,18 +69,21 @@ jobs:
             Release build of the SmartKey Keyboard Android input method.
 
             Features:
-            - QWERTY + two symbol keyboards with shift / caps lock
-            - Backspace (hold to repeat), enter, space, clipboard memory
-            - Emoji keyboard with categories and pages
-            - Word suggestions and auto-capitalization (on-device, privacy friendly)
-            - Built-in calculator that inserts results into any field
-            - Smart tools: quick text, text-case transforms, copy selection
-            - 8 themes, haptic feedback and key click sounds
-            - Privacy protections: no permissions (except vibration), encrypted
-              clipboard memory with auto-clear, opt-in learning, no network use
+            - QWERTY + two symbol keyboards with shift / caps lock and optional number row
+            - Backspace (hold to repeat), enter, space, arrow keys, undo / redo / cut / copy / paste
+            - Emoji keyboard with category bar and paged navigation
+            - Word suggestions, autocorrect and auto-capitalization (on-device, privacy friendly)
+            - Built-in calculator with parentheses, square root, powers, percent and history
+            - Smart tools: date & time insert, offline unit converter, password generator,
+              symbols, quick text and text-case transforms
+            - Searchable clipboard memory with pin, rename, clear-all and optional PIN lock
+            - Autocorrect, suggestions and learning all toggleable; learned words can be wiped
+            - 8 themes, key size and one-handed mode, haptic feedback and key click sounds
+            - Privacy protections: no permissions (except vibration), encrypted clipboard memory,
+              no network use, no ads, no tracking
             - Low-RAM friendly, Android 8 (API 26) and above
-            - Launch screen with step-by-step keyboard enable instructions and a
-              direct link to Android keyboard settings
+            - Launcher screen with step-by-step enable instructions and a direct link to
+              Android keyboard settings
           files: |
             app/build/outputs/apk/release/app-release.apk
           generate_release_notes: true

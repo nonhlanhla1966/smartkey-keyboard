@@ -8,6 +8,7 @@ import android.graphics.RectF
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
+import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
 
@@ -42,6 +43,26 @@ class KeyboardView @JvmOverloads constructor(
 
     var shiftState = 0
     var capsLock = false
+    var numberRowEnabled = false
+        set(value) {
+            field = value
+            layoutKeys()
+            invalidate()
+        }
+    var keyHeightMult = 1f
+        set(value) {
+            field = value
+            layoutKeys()
+            invalidate()
+        }
+    var oneHandedSide = 0
+        set(value) {
+            field = value
+            layoutKeys()
+            invalidate()
+        }
+
+    private val isLandscape: Boolean get() = width > height
 
     var suggestions: List<String> = emptyList()
     var typedPrefix: String = ""
@@ -83,6 +104,66 @@ class KeyboardView @JvmOverloads constructor(
     private var margin = dp(3f)
 
     private fun dp(v: Float): Int = (v * dp).toInt()
+    private fun sp(v: Float): Float = v * sp
+
+    private val LONG_PRESS_MS = 400L
+
+    private val altMap = mapOf(
+        'a' to listOf("á", "à", "â", "ä", "ã", "å", "ā", "æ"),
+        'e' to listOf("é", "è", "ê", "ë", "ē", "ė", "ę"),
+        'i' to listOf("í", "ì", "î", "ï", "ī", "į"),
+        'o' to listOf("ó", "ò", "ô", "ö", "õ", "ō", "ø", "œ"),
+        'u' to listOf("ú", "ù", "û", "ü", "ū", "ů"),
+        'y' to listOf("ý", "ÿ"),
+        'c' to listOf("ç", "ć", "č"),
+        'n' to listOf("ñ", "ń", "ň"),
+        's' to listOf("ß", "ś", "š"),
+        'z' to listOf("ž", "ź", "ż"),
+        'l' to listOf("ł"),
+        'd' to listOf("đ", "ð"),
+        'k' to listOf("ķ"),
+        'g' to listOf("ğ", "ģ"),
+        'r' to listOf("ŕ", "ř"),
+        't' to listOf("ť", "ţ"),
+        'w' to listOf("ŵ"),
+        ',' to listOf(",", "'", "\"", "“", "”", "„"),
+        '.' to listOf(".", "!", "?", ";", ":", "…"),
+        '?' to listOf("?", "¿"),
+        '!' to listOf("!", "¡"),
+        '\'' to listOf("'", "`", "´", "’"),
+        '"' to listOf("\"", "”", "„", "«", "»"),
+        '-' to listOf("-", "–", "—", "·"),
+        '/', to listOf("/", "\\", "÷"),
+        '1' to listOf("1", "¹", "½", "⅓", "¼"),
+        '0' to listOf("0", "°", "⁰")
+    )
+
+    private var longPressActive = false
+    private var longPressKeyId = -1
+    private var longPressAlts: List<String> = emptyList()
+    private var longPressSelected = 0
+    private val longPressRunnable = object : Runnable {
+        override fun run() {
+            if (pressedId >= 0 && pressedId < keys.size) {
+                val k = keys[pressedId]
+                val ch = k.spec.text.firstOrNull()?.lowercaseChar()
+                val alts = ch?.let { altMap[it] } ?: emptyList()
+                if (alts.isNotEmpty()) {
+                    longPressActive = true
+                    longPressKeyId = pressedId
+                    longPressAlts = listOf(k.spec.text) + alts
+                    longPressSelected = 0
+                    try {
+                        performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                    } catch (e: Exception) {
+                        // ignore
+                    }
+                    handler.removeCallbacks(repeatRunnable)
+                    invalidate()
+                }
+            }
+        }
+    }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
@@ -101,12 +182,12 @@ class KeyboardView @JvmOverloads constructor(
         }
     }
 
-    private fun buildRow(row: List<KeySpec>, y: Int, rowH: Int, w: Int) {
+    private fun buildRow(row: List<KeySpec>, y: Int, rowH: Int, stripX: Int, stripW: Int) {
         val totalWeight = row.sumOf { it.weight.toDouble() }.toFloat()
         val n = row.size
         val gaps = keyGap * (n - 1)
-        val avail = w - 2 * margin - gaps
-        var x = margin
+        val avail = stripW - 2 * margin - gaps
+        var x = stripX + margin
         for (i in row.indices) {
             val spec = row[i]
             val kw = (spec.weight / totalWeight * avail).toInt()
@@ -116,14 +197,35 @@ class KeyboardView @JvmOverloads constructor(
         }
     }
 
+    private fun oneHandedStrip(w: Int): Pair<Int, Int> {
+        return when {
+            oneHandedSide < 0 -> {
+                val sw = (w * 0.72f).toInt()
+                margin to sw - 2 * margin
+            }
+            oneHandedSide > 0 -> {
+                val sw = (w * 0.72f).toInt()
+                (w - sw - margin) to (sw - 2 * margin)
+            }
+            else -> margin to (w - 2 * margin)
+        }
+    }
+
     private fun layoutNormal(w: Int, h: Int) {
-        showSuggestions = true
         keys.add(RK(KeySpec(KeyKind.SPACE), 0, 0, w, suggestionsBarH))
-        val rows = KeyboardLayout.rowsFor(mode)
-        val rowsH = (h - suggestionsBarH) / rows.size
+        val numberRow = numberRowEnabled || isLandscape
+        val rows = KeyboardLayout.rowsFor(mode, numberRow)
+        val totalH = h - suggestionsBarH
+        val rowsH = (totalH / rows.size * keyHeightMult).toInt().coerceAtLeast(dp(28f))
+        val usedH = rowsH * rows.size + keyGap * (rows.size - 1)
+        val top0 = suggestionsBarH + ((totalH - usedH) / 2).coerceAtLeast(0)
+        val (stripX, stripW) = oneHandedStrip(w)
         for (r in rows.indices) {
-            val y = suggestionsBarH + (rowsH + keyGap) * r
-            buildRow(rows[r], y, rowsH, w)
+            val y = top0 + (rowsH + keyGap) * r
+            buildRow(rows[r], y, rowsH, stripX, stripW)
+        }
+        if (oneHandedSide != 0) {
+            keys.add(RK(KeySpec(KeyKind.HIDE), 0, 0, margin + dp(2f), h))
         }
     }
 
@@ -134,7 +236,7 @@ class KeyboardView @JvmOverloads constructor(
         val rowsH = (h - displayH) / rows.size
         for (r in rows.indices) {
             val y = displayH + (rowsH + keyGap) * r
-            buildRow(rows[r], y, rowsH, w)
+            buildRow(rows[r], y, rowsH, margin, w - 2 * margin)
         }
     }
 
@@ -155,13 +257,12 @@ class KeyboardView @JvmOverloads constructor(
             }
         }
         val catY = gridH
-        val categories = listOf(
-            KeySpec(KeyKind.EMOJI_PREV, "◀"), KeySpec(KeyKind.EMOJI_CATEGORY, "😀"),
-            KeySpec(KeyKind.EMOJI_CATEGORY, "🐶"), KeySpec(KeyKind.EMOJI_CATEGORY, "🍎"),
-            KeySpec(KeyKind.EMOJI_CATEGORY, "⚽"), KeySpec(KeyKind.EMOJI_CATEGORY, "🚗"),
-            KeySpec(KeyKind.EMOJI_CATEGORY, "💡"), KeySpec(KeyKind.EMOJI_CATEGORY, "🔣"),
-            KeySpec(KeyKind.EMOJI_NEXT, "▶")
-        )
+        val categories = ArrayList<KeySpec>()
+        categories.add(KeySpec(KeyKind.EMOJI_PREV, "◀"))
+        for (i in 0 until EmojiData.CATEGORY_COUNT) {
+            categories.add(KeySpec(KeyKind.EMOJI_CATEGORY, EmojiData.categoryIcon(i)))
+        }
+        categories.add(KeySpec(KeyKind.EMOJI_NEXT, "▶"))
         val cellW = w / 9f
         for (i in categories.indices) {
             val x = (cellW * i).toInt()
@@ -174,7 +275,7 @@ class KeyboardView @JvmOverloads constructor(
             KeySpec(KeyKind.CLIPBOARD, "⧉"), KeySpec(KeyKind.BACKSPACE, "⌫"),
             KeySpec(KeyKind.ENTER, "⏎")
         )
-        buildRow(actionRow, actionY, actionBarH, w)
+        buildRow(actionRow, actionY, actionBarH, margin, w - 2 * margin)
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -183,7 +284,9 @@ class KeyboardView @JvmOverloads constructor(
         for (k in keys) {
             drawKey(canvas, k)
         }
-        if (pressedId >= 0 && pressedId < keys.size) {
+        if (longPressActive && longPressKeyId >= 0 && longPressKeyId < keys.size) {
+            drawLongPressPopup(canvas, keys[longPressKeyId])
+        } else if (pressedId >= 0 && pressedId < keys.size) {
             val k = keys[pressedId]
             if (k.spec.kind == KeyKind.CHAR && k.spec.text.length <= 1) {
                 drawPopup(canvas, k)
@@ -276,7 +379,7 @@ class KeyboardView @JvmOverloads constructor(
         if (label == null || label.isEmpty()) return
         if (label.isBlank()) return
 
-        val needShrink = spec.kind == KeyKind.BACKSPACE || spec.kind == KeyKind.ENTER || spec.kind == KeyKind.CALC_OP || spec.kind == KeyKind.EMOJI_CATEGORY
+        val needShrink = spec.kind == KeyKind.BACKSPACE || spec.kind == KeyKind.ENTER || spec.kind == KeyKind.CALC_OP || spec.kind == KeyKind.EMOJI_CATEGORY || spec.kind in EDIT_SHRINK
         if (needShrink) textPaint.textSize = sp(14f)
         val tw = textPaint.measureText(label)
         val cx = k.x + k.w / 2f - tw / 2f
@@ -298,7 +401,14 @@ class KeyboardView @JvmOverloads constructor(
     }
 
     private fun labelFor(spec: KeySpec): String? = when (spec.kind) {
-        KeyKind.CHAR -> spec.text
+        KeyKind.CHAR -> {
+            val t = spec.text
+            if (t.length == 1 && t[0] in 'A'..'Z' && mode == KeyboardLayout.MODE_LETTERS && shiftState == 0 && !capsLock) {
+                t.lowercase()
+            } else {
+                t
+            }
+        }
         KeyKind.SHIFT -> if (capsLock) "⇪" else "⇧"
         KeyKind.BACKSPACE -> "⌫"
         KeyKind.ENTER -> "⏎"
@@ -319,11 +429,24 @@ class KeyboardView @JvmOverloads constructor(
         KeyKind.CALC_BSP -> "⌫"
         KeyKind.CALC_EQUALS -> "="
         KeyKind.CALC_OP -> spec.text
+        KeyKind.CURSOR_LEFT -> "◀"
+        KeyKind.CURSOR_RIGHT -> "▶"
+        KeyKind.CURSOR_HOME -> "⇤"
+        KeyKind.CURSOR_END -> "⇥"
+        KeyKind.COPY -> "⧉"
+        KeyKind.CUT -> "✂"
+        KeyKind.PASTE -> "📋"
+        KeyKind.SELECT_ALL -> "⌑"
+        KeyKind.UNDO -> "↶"
+        KeyKind.REDO -> "↷"
+        KeyKind.NEWLINE -> "⏎"
+        KeyKind.CALC_HISTORY -> "🕘"
         else -> spec.text.ifEmpty { null }
     }
 
     private fun drawPopup(canvas: Canvas, k: RK) {
         val text = k.spec.text
+        if (text.isBlank()) return
         val pw = dp(52f)
         val ph = dp(50f)
         var px = k.x + k.w / 2f - pw / 2f
@@ -339,6 +462,53 @@ class KeyboardView @JvmOverloads constructor(
         canvas.drawText(text, px + pw / 2f - tp.measureText(text) / 2f, py + ph / 2f - (tp.ascent() + tp.descent()) / 2f, tp)
     }
 
+    private fun drawLongPressPopup(canvas: Canvas, k: RK) {
+        val alts = longPressAlts
+        if (alts.isEmpty()) return
+        val cellW = dp(46f)
+        val popupW = cellW * alts.size + dp(8f)
+        var px = k.x + k.w / 2f - popupW / 2f
+        px = px.coerceIn(margin.toFloat(), (width - popupW - margin).toFloat())
+        val popupH = dp(48f)
+        val py = k.y - popupH - dp(4f).toFloat()
+
+        val popupPaint = Paint(Paint.ANTI_ALIAS_FLAG)
+        popupPaint.color = theme.keyDark
+        val rect = RectF(px, py, px + popupW, py + popupH)
+        canvas.drawRoundRect(rect, dp(6f).toFloat(), dp(6f).toFloat(), popupPaint)
+
+        val tp = Paint(Paint.ANTI_ALIAS_FLAG)
+        tp.textSize = sp(20f)
+        for (i in alts.indices) {
+            val cx = px + dp(4f) + cellW * i
+            if (i == longPressSelected) {
+                keyPaint.color = theme.accent
+                canvas.drawRoundRect(
+                    RectF(cx, py + dp(2f), cx + cellW - dp(2f), py + popupH - dp(2f)),
+                    dp(4f).toFloat(), dp(4f).toFloat(), keyPaint
+                )
+                tp.color = theme.accentText
+            } else {
+                tp.color = theme.keyText
+            }
+            val label = alts[i]
+            canvas.drawText(label, cx + cellW / 2f - tp.measureText(label) / 2f, py + popupH / 2f - (tp.ascent() + tp.descent()) / 2f, tp)
+        }
+    }
+
+    private fun updateLongPressSelection(x: Float) {
+        if (longPressAlts.isEmpty()) return
+        val cellW = dp(46f)
+        val popupW = cellW * longPressAlts.size + dp(8f)
+        var px = keys[longPressKeyId].x + keys[longPressKeyId].w / 2f - popupW / 2f
+        px = px.coerceIn(margin.toFloat(), (width - popupW - margin).toFloat())
+        val idx = ((x - px - dp(4f)) / cellW).toInt().coerceIn(0, longPressAlts.size - 1)
+        if (idx != longPressSelected) {
+            longPressSelected = idx
+            invalidate()
+        }
+    }
+
     override fun onTouchEvent(event: MotionEvent): Boolean {
         parent?.requestDisallowInterceptTouchEvent(true)
         when (event.actionMasked) {
@@ -348,6 +518,10 @@ class KeyboardView @JvmOverloads constructor(
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
+                if (longPressActive) {
+                    updateLongPressSelection(event.x)
+                    return true
+                }
                 val id = findKey(event.x, event.y)
                 if (id != pressedId) {
                     val prev = if (pressedId in keys.indices) keys[pressedId] else null
@@ -358,6 +532,24 @@ class KeyboardView @JvmOverloads constructor(
                 return true
             }
             MotionEvent.ACTION_UP -> {
+                if (longPressActive) {
+                    cancelLongPress()
+                    val k = if (longPressKeyId in keys.indices) keys[longPressKeyId] else null
+                    val alts = longPressAlts
+                    if (k != null) {
+                        k.pressed = false
+                        val sel = longPressSelected.coerceIn(0, alts.size - 1)
+                        if (sel in alts.indices && alts[sel] != k.spec.text) {
+                            listener?.onKey(KeySpec(KeyKind.CHAR, alts[sel]))
+                        } else {
+                            listener?.onKey(k.spec)
+                        }
+                    }
+                    longPressKeyId = -1
+                    pressedId = -1
+                    invalidate()
+                    return true
+                }
                 val id = pressedId
                 cancelRepeat()
                 if (id in keys.indices) {
@@ -375,6 +567,7 @@ class KeyboardView @JvmOverloads constructor(
                 return true
             }
             MotionEvent.ACTION_CANCEL -> {
+                cancelLongPress()
                 cancelRepeat()
                 if (pressedId in keys.indices) keys[pressedId].pressed = false
                 pressedId = -1
@@ -391,10 +584,15 @@ class KeyboardView @JvmOverloads constructor(
         k.pressed = true
         invalidate()
         val spec = k.spec
+        handler.removeCallbacks(longPressRunnable)
+        longPressActive = false
         if (spec.kind == KeyKind.BACKSPACE || spec.kind == KeyKind.CALC_BSP) {
             repeatId = id
-            handler.removeCallbacksAndMessages(null)
+            handler.removeCallbacks(repeatRunnable)
             handler.postDelayed(repeatRunnable, 350)
+        } else if (spec.kind == KeyKind.CHAR && spec.text.length == 1 && spec.text.isNotBlank()) {
+            longPressKeyId = -1
+            handler.postDelayed(longPressRunnable, LONG_PRESS_MS)
         }
     }
 
@@ -415,6 +613,10 @@ class KeyboardView @JvmOverloads constructor(
     private fun cancelRepeat() {
         repeatId = -1
         handler.removeCallbacks(repeatRunnable)
+    }
+
+    private fun cancelLongPress() {
+        handler.removeCallbacks(longPressRunnable)
     }
 
     private fun findKey(x: Float, y: Float): Int {
@@ -461,8 +663,6 @@ class KeyboardView @JvmOverloads constructor(
         invalidate()
     }
 
-    private fun sp(v: Float): Float = v * sp
-
     fun setShowSuggestions(enabled: Boolean) {
         showSuggestions = enabled
         invalidate()
@@ -475,7 +675,15 @@ class KeyboardView @JvmOverloads constructor(
             KeyKind.MODE_EMOJI, KeyKind.MODE_CALC, KeyKind.SETTINGS, KeyKind.CLIPBOARD,
             KeyKind.TOOLS, KeyKind.HIDE, KeyKind.EMOJI_PREV, KeyKind.EMOJI_NEXT,
             KeyKind.EMOJI_CATEGORY, KeyKind.CALC_AC, KeyKind.CALC_BSP,
-            KeyKind.CALC_EQUALS, KeyKind.CALC_OP
+            KeyKind.CALC_EQUALS, KeyKind.CALC_OP,
+            KeyKind.CURSOR_LEFT, KeyKind.CURSOR_RIGHT, KeyKind.CURSOR_HOME, KeyKind.CURSOR_END,
+            KeyKind.COPY, KeyKind.CUT, KeyKind.PASTE, KeyKind.SELECT_ALL, KeyKind.UNDO, KeyKind.REDO,
+            KeyKind.NEWLINE, KeyKind.CALC_HISTORY
+        )
+        private val EDIT_SHRINK = setOf(
+            KeyKind.CURSOR_LEFT, KeyKind.CURSOR_RIGHT, KeyKind.CURSOR_HOME, KeyKind.CURSOR_END,
+            KeyKind.COPY, KeyKind.CUT, KeyKind.PASTE, KeyKind.SELECT_ALL, KeyKind.UNDO, KeyKind.REDO,
+            KeyKind.NEWLINE, KeyKind.CALC_HISTORY
         )
     }
 }

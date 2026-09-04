@@ -3,8 +3,17 @@ package com.smartkey.keyboard
 import android.content.Context
 import java.util.Base64
 
-class SmartPrefs(context: Context) {
-    val prefs = context.getSharedPreferences("smartkey", Context.MODE_PRIVATE)
+class SmartPrefs private constructor(
+    context: Context?,
+    prefs: android.content.SharedPreferences?
+) {
+    val prefs: android.content.SharedPreferences =
+        prefs ?: context!!.getSharedPreferences("smartkey", Context.MODE_PRIVATE)
+
+    constructor(context: Context) : this(context, null)
+
+    // Test-only constructor that bypasses the Android Context
+    constructor(prefs: android.content.SharedPreferences) : this(null, prefs)
 
     fun putString(key: String, value: String) {
         prefs.edit().putString(key, value).apply()
@@ -37,7 +46,13 @@ class SmartPrefs(context: Context) {
         const val KEY_LEARNING = "learning"
         const val KEY_CLIPBOARD_ENABLED = "clipboard_enabled"
         const val KEY_CLIPBOARD_HOURS = "clipboard_hours"
+        const val KEY_CLIPBOARD_PIN = "clipboard_pin"
         const val KEY_LEARNED_WORDS = "learned_words"
+        const val KEY_NUMBER_ROW = "number_row"
+        const val KEY_KEY_HEIGHT = "key_height"
+        const val KEY_AUTOCORRECT = "autocorrect"
+        const val KEY_ONE_HANDED = "one_handed"
+        const val KEY_LANDSCAPE_NUMROW = "landscape_numrow"
     }
 }
 
@@ -133,6 +148,46 @@ class SuggestionsEngine(private val prefs: SmartPrefs) {
             if (out.size >= count) break
         }
         return out
+    }
+
+    /**
+     * Autocorrection: given a typed word, pick the best dictionary match using
+     * edit-distance fallback when there is no exact/prefix suggestion.
+     * Returns null when the word already looks correct or is too short.
+     */
+    fun correct(typedRaw: String): String? {
+        val typed = wordKey(typedRaw)
+        if (typed.isEmpty() || typed.length < 3) return null
+        val pool = HashMap<String, Int>()
+        for ((w, c) in learned) pool[w] = c
+        for ((i, w) in COMMON.withIndex()) {
+            val bonus = (COMMON.size - i)
+            pool[w] = (pool[w] ?: 0) + bonus
+        }
+        if (pool.containsKey(typed)) return null
+        var best: Pair<String, Int>? = null
+        for ((w, c) in pool) {
+            val d = editDistance(typed, w)
+            if (d == 0) return null
+            if (d <= 2) {
+                val score = d * 1000 - c
+                if (best == null || score < best.second) best = w to score
+            }
+        }
+        return best?.first
+    }
+
+    private fun editDistance(a: String, b: String): Int {
+        val dp = Array(a.length + 1) { IntArray(b.length + 1) }
+        for (i in 0..a.length) dp[i][0] = i
+        for (j in 0..b.length) dp[0][j] = j
+        for (i in 1..a.length) {
+            for (j in 1..b.length) {
+                val cost = if (a[i - 1] == b[j - 1]) 0 else 1
+                dp[i][j] = minOf(dp[i - 1][j] + 1, dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost)
+            }
+        }
+        return dp[a.length][b.length]
     }
 
     fun shouldCapitalize(prefix: String): Boolean {

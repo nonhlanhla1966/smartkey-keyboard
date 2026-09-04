@@ -68,4 +68,56 @@
 
     <string name="calc_display_hint">0</string>
     <string name="calc_send">Insert result</string>
+
+    <string name="main_subtitle">A fast, private keyboard that lives entirely on your phone.</string>
+    <string name="btn_enable_keyboard">Enable SmartKey Keyboard</string>
+    <string name="btn_open_settings">Open keyboard settings</string>
+    <string name="main_how_header">How to enable</string>
+    <string name="main_privacy_header">Your privacy</string>
+    <string name="main_privacy_body">SmartKey Keyboard works completely offline. It has no internet permission, shows no ads, does not track you, and never stores password contents. Typing suggestions, clipboard history, themes and settings all stay on this device.</string>
+    <string name="main_version">Version 1.0.0</string>
+
+    <string name="setting_layout">Keyboard layout</string>
+    <string name="setting_numberrow">Number row</string>
+    <string name="setting_autocorrect">Autocorrect</string>
+    <string name="setting_keysize">Key size</string>
+    <string name="key_size_small">Small</string>
+    <string name="key_size_medium">Medium</string>
+    <string name="key_size_large">Large</string>
+    <string name="setting_onehanded">One-handed mode</string>
+    <string name="one_handed_off">Off</string>
+    <string name="one_handed_left">Left</string>
+    <string name="one_handed_right">Right</string>
+    <string name="setting_clipboard_clear">Clear clipboard history</string>
+    <string name="setting_clipboard_cleared">Clipboard history cleared</string>
+    <string name="setting_about">About</string>
+    <string name="setting_about_body">SmartKey Keyboard v1.0.0 — offline-first input method for Android 8+.</string>
+    <string name="setting_privacy_statement">No internet permission. No ads. No analytics. No keystroke logging. Clipboard memory is optional, encrypted on-device, and never stores password contents.</string>
+
+    <string name="clipboard_search">Search copies…</string>
+    <string name="clipboard_clear_all">Clear all</string>
+    <string name="clipboard_pin">Pin</string>
+    <string name="clipboard_unpin">Unpin</string>
+    <string name="clipboard_rename">Rename</string>
+    <string name="clipboard_rename_title">Rename item</string>
+    <string name="clipboard_rename_hint">Label</string>
+    <string name="clipboard_action_ok">OK</string>
+    <string name="clipboard_action_cancel">Cancel</string>
+    <string name="clipboard_confirm_clear">Clear all clipboard items?</string>
+
+    <string name="tools_datetime">Date &amp; time</string>
+    <string name="tools_insert_date">Insert date</string>
+    <string name="tools_insert_time">Insert time</string>
+    <string name="tools_converter">Unit converter</string>
+    <string name="tools_converter_value">Value</string>
+    <string name="tools_converter_convert">Convert</string>
+    <string name="tools_converter_insert">Insert result</string>
+    <string name="tools_password">Password generator</string>
+    <string name="tools_password_length">Length</string>
+    <string name="tools_password_upper">A–Z</string>
+    <string name="tools_password_digits">0–9</string>
+    <string name="tools_password_symbols">!@#</string>
+    <string name="tools_password_generate">Generate</string>
+    <string name="tools_password_insert">Insert password</string>
+    <string name="tools_symbols">Symbols</string>
 </resources>

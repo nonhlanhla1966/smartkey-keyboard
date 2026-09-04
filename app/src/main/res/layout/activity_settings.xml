@@ -116,10 +116,53 @@
                 android:text="@string/setting_autocap" />
 
             <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/switch_autocorrect"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/setting_autocorrect" />
+
+            <com.google.android.material.materialswitch.MaterialSwitch
                 android:id="@+id/switch_learning"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="@string/setting_learning" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp"
+                android:text="@string/setting_layout"
+                android:textStyle="bold"
+                android:textSize="16sp" />
+
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/switch_numberrow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/setting_numberrow" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="8dp"
+                android:text="@string/setting_keysize" />
+
+            <Spinner
+                android:id="@+id/spinner_keyheight"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="8dp"
+                android:text="@string/setting_onehanded" />
+
+            <Spinner
+                android:id="@+id/spinner_onehanded"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
 
             <TextView
                 android:layout_width="match_parent"
@@ -168,6 +211,37 @@
                 android:id="@+id/spinner_clipboard_hours"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content" />
+
+            <Button
+                android:id="@+id/btn_clear_clipboard"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/setting_clipboard_clear" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingTop="8dp"
+                android:paddingBottom="4dp"
+                android:text="@string/setting_about"
+                android:textStyle="bold"
+                android:textSize="16sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingBottom="8dp"
+                android:text="@string/setting_privacy_statement"
+                android:textSize="13sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingBottom="8dp"
+                android:text="@string/setting_about_body"
+                android:textSize="13sp"
+                android:textColor="#6B6E74" />
 
         </LinearLayout>
     </ScrollView>
