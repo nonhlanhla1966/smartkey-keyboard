@@ -10,7 +10,6 @@ import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.ScrollView
 import android.widget.TextView
-import androidx.core.view.setPadding
 
 class ClipboardPanel(
     private val ctx: Context,
@@ -53,7 +52,6 @@ class ClipboardPanel(
             empty.setPadding(dp(4), dp(4), dp(4), dp(4))
             list.addView(empty)
         } else {
-            val width = anchor.width.coerceAtLeast(dp(240))
             for (item in items) {
                 val row = LinearLayout(ctx)
                 row.orientation = LinearLayout.HORIZONTAL
