@@ -146,7 +146,7 @@ class SmartKeyIME : InputMethodService(), KeyboardListener {
                 else -> ch
             }
             out = target.toString()
-            if (out == ch) {
+            if (target == ch) {
                 if (shiftState == 1) {
                     shiftState = 0
                     capitalizeNext = false

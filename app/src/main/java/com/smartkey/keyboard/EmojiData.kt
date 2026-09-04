@@ -25,7 +25,7 @@ object KeyboardLayout {
         listOf(c('A'), c('S'), c('D'), c('F'), c('G'), c('H'), c('J'), c('K'), c('L')),
         listOf(k(KeyKind.SHIFT, weight = 1.5f), c('Z'), c('X'), c('C'), c('V'), c('B'), c('N'), c('M'), k(KeyKind.BACKSPACE, weight = 1.5f)),
         listOf(k(KeyKind.MODE_SYMBOLS_1, weight = 1.4f), cs(","), k(KeyKind.SPACE, weight = 5.4f), cs("."), k(KeyKind.ENTER, weight = 1.4f)),
-        listOf(k(KeyKind.EMOJI, weight = 1.2f), k(KeyKind.CALC, weight = 1.2f), k(KeyKind.CLIPBOARD, weight = 1.2f), k(KeyKind.TOOLS, weight = 1.2f), k(KeyKind.SETTINGS, weight = 1.2f), k(KeyKind.HIDE, weight = 1.2f))
+        listOf(k(KeyKind.EMOJI, weight = 1.2f), k(KeyKind.MODE_CALC, weight = 1.2f), k(KeyKind.CLIPBOARD, weight = 1.2f), k(KeyKind.TOOLS, weight = 1.2f), k(KeyKind.SETTINGS, weight = 1.2f), k(KeyKind.HIDE, weight = 1.2f))
     )
 
     val SYMBOLS_1: List<List<KeySpec>> = listOf(
@@ -33,7 +33,7 @@ object KeyboardLayout {
         listOf(c('@'), c('#'), c('$'), c('%'), c('&'), c('-'), c('+'), c('('), c(')')),
         listOf(k(KeyKind.MODE_SYMBOLS_2, weight = 1.5f), c('*'), c('"'), c('\''), c(':'), c(';'), c('!'), c('?'), k(KeyKind.BACKSPACE, weight = 1.5f)),
         listOf(k(KeyKind.MODE_LETTERS, weight = 1.4f), cs(","), k(KeyKind.SPACE, weight = 5.4f), cs("."), k(KeyKind.ENTER, weight = 1.4f)),
-        listOf(k(KeyKind.EMOJI, weight = 1.2f), k(KeyKind.CALC, weight = 1.2f), k(KeyKind.CLIPBOARD, weight = 1.2f), k(KeyKind.TOOLS, weight = 1.2f), k(KeyKind.SETTINGS, weight = 1.2f), k(KeyKind.HIDE, weight = 1.2f))
+        listOf(k(KeyKind.EMOJI, weight = 1.2f), k(KeyKind.MODE_CALC, weight = 1.2f), k(KeyKind.CLIPBOARD, weight = 1.2f), k(KeyKind.TOOLS, weight = 1.2f), k(KeyKind.SETTINGS, weight = 1.2f), k(KeyKind.HIDE, weight = 1.2f))
     )
 
     val SYMBOLS_2: List<List<KeySpec>> = listOf(
@@ -41,7 +41,7 @@ object KeyboardLayout {
         listOf(c('£'), c('¢'), c('€'), c('¥'), c('^'), c('°'), c('='), c('{'), c('}')),
         listOf(k(KeyKind.MODE_SYMBOLS_1, weight = 1.5f), c('_'), c('\\'), c('<'), c('>'), c('/'), c('['), c(']'), k(KeyKind.BACKSPACE, weight = 1.5f)),
         listOf(k(KeyKind.MODE_LETTERS, weight = 1.4f), cs(","), k(KeyKind.SPACE, weight = 5.4f), cs("."), k(KeyKind.ENTER, weight = 1.4f)),
-        listOf(k(KeyKind.EMOJI, weight = 1.2f), k(KeyKind.CALC, weight = 1.2f), k(KeyKind.CLIPBOARD, weight = 1.2f), k(KeyKind.TOOLS, weight = 1.2f), k(KeyKind.SETTINGS, weight = 1.2f), k(KeyKind.HIDE, weight = 1.2f))
+        listOf(k(KeyKind.EMOJI, weight = 1.2f), k(KeyKind.MODE_CALC, weight = 1.2f), k(KeyKind.CLIPBOARD, weight = 1.2f), k(KeyKind.TOOLS, weight = 1.2f), k(KeyKind.SETTINGS, weight = 1.2f), k(KeyKind.HIDE, weight = 1.2f))
     )
 
     val CALC: List<List<KeySpec>> = listOf(

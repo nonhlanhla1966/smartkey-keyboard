@@ -101,7 +101,7 @@ class KeyboardView @JvmOverloads constructor(
         }
     }
 
-    private fun buildRow(row: List<KeySpec>, y: Int, rowH: Int, w: Int, ids: List<BoundsHolder>?) {
+    private fun buildRow(row: List<KeySpec>, y: Int, rowH: Int, w: Int) {
         val totalWeight = row.sumOf { it.weight.toDouble() }.toFloat()
         val n = row.size
         val gaps = keyGap * (n - 1)
@@ -112,12 +112,9 @@ class KeyboardView @JvmOverloads constructor(
             val kw = (spec.weight / totalWeight * avail).toInt()
             val key = RK(spec, x, y, kw, rowH)
             keys.add(key)
-            ids?.add(BoundsHolder(key))
             x += kw + keyGap
         }
     }
-
-    private class BoundsHolder(val key: RK)
 
     private fun layoutNormal(w: Int, h: Int) {
         showSuggestions = true
@@ -126,7 +123,7 @@ class KeyboardView @JvmOverloads constructor(
         val rowsH = (h - suggestionsBarH) / rows.size
         for (r in rows.indices) {
             val y = suggestionsBarH + (rowsH + keyGap) * r
-            buildRow(rows[r], y, rowsH, w, null)
+            buildRow(rows[r], y, rowsH, w)
         }
     }
 
@@ -137,7 +134,7 @@ class KeyboardView @JvmOverloads constructor(
         val rowsH = (h - displayH) / rows.size
         for (r in rows.indices) {
             val y = displayH + (rowsH + keyGap) * r
-            buildRow(rows[r], y, rowsH, w, null)
+            buildRow(rows[r], y, rowsH, w)
         }
     }
 
@@ -177,7 +174,7 @@ class KeyboardView @JvmOverloads constructor(
             KeySpec(KeyKind.CLIPBOARD, "⧉"), KeySpec(KeyKind.BACKSPACE, "⌫"),
             KeySpec(KeyKind.ENTER, "⏎")
         )
-        buildRow(actionRow, actionY, actionBarH, w, null)
+        buildRow(actionRow, actionY, actionBarH, w)
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -216,7 +213,7 @@ class KeyboardView @JvmOverloads constructor(
         hintPaint.textSize = sp(12f)
         if (prefix.isNotBlank()) {
             val shown = if (prefix.length > 34) "…" + prefix.takeLast(33) else prefix
-            canvas.drawText(shown, margin + dp(8f), suggestionsBarH / 2f - (hintPaint.ascent() + hintPaint.descent()) / 2f, hintPaint)
+            canvas.drawText(shown, (margin + dp(8f)).toFloat(), suggestionsBarH / 2f - (hintPaint.ascent() + hintPaint.descent()) / 2f, hintPaint)
         }
         if (!showSuggestions) return
         if (s.isEmpty()) return
@@ -246,7 +243,7 @@ class KeyboardView @JvmOverloads constructor(
         canvas.drawText(text, width - margin - dp(8f) - textPaint.measureText(text), y, textPaint)
         hintPaint.color = theme.dimText
         hintPaint.textSize = sp(10f)
-        canvas.drawText("=", margin + dp(8f), y, hintPaint)
+        canvas.drawText("=", (margin + dp(8f)).toFloat(), y, hintPaint)
     }
 
     private fun drawKey(canvas: Canvas, k: RK) {
@@ -296,7 +293,7 @@ class KeyboardView @JvmOverloads constructor(
             hintPaint.color = theme.accentText
             hintPaint.textSize = sp(8f)
             val hint = "0"
-            canvas.drawText(hint, k.x + k.w - dp(6f) - hintPaint.measureText(hint), k.y + k.h - dp(3f), hintPaint)
+            canvas.drawText(hint, k.x + k.w - dp(6f) - hintPaint.measureText(hint), (k.y + k.h - dp(3f)).toFloat(), hintPaint)
         }
     }
 
@@ -332,7 +329,7 @@ class KeyboardView @JvmOverloads constructor(
         var px = k.x + k.w / 2f - pw / 2f
         val py = k.y - ph - dp(4f).toFloat()
         if (px < margin) px = margin.toFloat()
-        if (px + pw > width - margin) px = width - margin - pw
+        if (px + pw > width - margin) px = (width - margin - pw).toFloat()
         val popupPaint = Paint(Paint.ANTI_ALIAS_FLAG)
         popupPaint.color = theme.keyDark
         canvas.drawRoundRect(px, py, px + pw, py + ph, dp(6f).toFloat(), dp(6f).toFloat(), popupPaint)

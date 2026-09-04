@@ -10,6 +10,7 @@ import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.ScrollView
 import android.widget.TextView
+import androidx.core.view.setPadding
 
 class ClipboardPanel(
     private val ctx: Context,
