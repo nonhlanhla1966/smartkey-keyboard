@@ -96,7 +96,7 @@ class ToolsPanel(private val ctx: Context) {
             et.setTextColor(theme.keyText)
             et.setHintTextColor(theme.dimText)
             et.setTextSize(14f)
-            et.isShowSoftInputOnFocus = false
+            et.showSoftInputOnFocus = false
             et.inputType = if (number) InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
             else InputType.TYPE_CLASS_TEXT
             val lp = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)

@@ -68,7 +68,7 @@ class ClipboardPanel(
         search.setTextColor(theme.keyText)
         search.setHintTextColor(theme.dimText)
         search.setTextSize(13f)
-        search.isShowSoftInputOnFocus = false
+        search.showSoftInputOnFocus = false
         search.setPadding(dp(6), dp(6), dp(6), dp(6))
         list.addView(search)
         search.setOnClickListener {
@@ -190,7 +190,7 @@ class ClipboardPanel(
         val input = EditText(ctx)
         input.setText(item.displayName)
         input.setSelection(input.text.length)
-        input.isShowSoftInputOnFocus = false
+        input.showSoftInputOnFocus = false
         val lp = LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT

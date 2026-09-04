@@ -133,7 +133,7 @@ class KeyboardView @JvmOverloads constructor(
         '\'' to listOf("'", "`", "´", "’"),
         '"' to listOf("\"", "”", "„", "«", "»"),
         '-' to listOf("-", "–", "—", "·"),
-        '/', to listOf("/", "\\", "÷"),
+        '/' to listOf("/", "\\", "÷"),
         '1' to listOf("1", "¹", "½", "⅓", "¼"),
         '0' to listOf("0", "°", "⁰")
     )
@@ -533,7 +533,7 @@ class KeyboardView @JvmOverloads constructor(
             }
             MotionEvent.ACTION_UP -> {
                 if (longPressActive) {
-                    cancelLongPress()
+                    cancelLongPressTimer()
                     val k = if (longPressKeyId in keys.indices) keys[longPressKeyId] else null
                     val alts = longPressAlts
                     if (k != null) {
@@ -567,7 +567,7 @@ class KeyboardView @JvmOverloads constructor(
                 return true
             }
             MotionEvent.ACTION_CANCEL -> {
-                cancelLongPress()
+                cancelLongPressTimer()
                 cancelRepeat()
                 if (pressedId in keys.indices) keys[pressedId].pressed = false
                 pressedId = -1
@@ -615,7 +615,7 @@ class KeyboardView @JvmOverloads constructor(
         handler.removeCallbacks(repeatRunnable)
     }
 
-    private fun cancelLongPress() {
+    private fun cancelLongPressTimer() {
         handler.removeCallbacks(longPressRunnable)
     }
 

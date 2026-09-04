@@ -106,31 +106,29 @@ class SmartClipboard(context: Context, prefs: SmartPrefs) {
         save(updated)
     }
 
-    fun items(): List<ClipItem> = rawItems().map { toItem(it) }.let { list ->
-        ClipboardStore.sorted(list.map { fromItem(it) }).map { toItem(it) }
-    }
+    fun items(): List<ClipItem> =
+        ClipboardStore.sorted(rawStoreItems()).map { toItem(it) }
 
     fun search(query: String): List<ClipItem> {
-        return ClipboardStore.search(items().map { fromItem(it) }, query).map { toItem(it) }
+        return ClipboardStore.search(rawStoreItems(), query).map { toItem(it) }
     }
 
     fun togglePin(item: ClipItem) {
-        save(ClipboardStore.togglePin(rawItems().map { fromItem(it) }, item.text).map { toItem(it) })
+        save(ClipboardStore.togglePin(rawStoreItems(), item.text))
     }
 
     fun rename(item: ClipItem, newName: String) {
-        save(ClipboardStore.rename(rawItems().map { fromItem(it) }, item.text, newName.orEmpty()).map { toItem(it) })
+        save(ClipboardStore.rename(rawStoreItems(), item.text, newName.orEmpty()))
     }
 
     fun delete(item: ClipItem) {
-        save(ClipboardStore.delete(rawItems().map { fromItem(it) }, item.text).map { toItem(it) })
+        save(ClipboardStore.delete(rawStoreItems(), item.text))
     }
 
     fun clearAll() {
         prefs.remove(SmartPrefs.KEY_CLIPBOARD_ENABLED + "_list")
     }
 
-    private fun fromItem(it: ClipItem) = ClipboardStore.Item(it.text, it.timestamp, it.pinned, it.name)
     private fun toItem(it: ClipboardStore.Item) = ClipItem(it.text, it.timestamp, it.pinned, it.name)
 
     private fun storeItems(): List<ClipboardStore.Item> = rawStoreItems()
@@ -144,11 +142,8 @@ class SmartClipboard(context: Context, prefs: SmartPrefs) {
         return ClipboardStore.sorted(ClipboardStore.prune(parsed, hours, now))
     }
 
-    private fun rawItems(): List<ClipItem> = rawStoreItems().map { toItem(it) }
-
-    private fun save(list: List<ClipItem>) {
-        val storageList = list.map { fromItem(it) }
-        val serialized = ClipboardStore.serialize(ClipboardStore.sorted(storageList))
+    private fun save(list: List<ClipboardStore.Item>) {
+        val serialized = ClipboardStore.serialize(ClipboardStore.sorted(list))
         val encrypted = XORCipher.encrypt(serialized, key)
         if (encrypted.isEmpty()) {
             prefs.remove(SmartPrefs.KEY_CLIPBOARD_ENABLED + "_list")
