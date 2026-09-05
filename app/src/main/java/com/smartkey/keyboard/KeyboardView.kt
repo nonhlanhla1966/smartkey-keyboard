@@ -401,7 +401,7 @@ class KeyboardView @JvmOverloads constructor(
             val cx = matchesX + cellW * i + cellW / 2f
             if (i == 0) {
                 keyPaint.color = theme.accent
-                val cell = RectF(matchesX + cellW * i + dp(1f), dp(2f), matchesX + cellW * (i + 1) - dp(1f), (barH - dp(2f)).toFloat())
+                val cell = RectF(matchesX + cellW * i + dp(1f), dp(2f).toFloat(), matchesX + cellW * (i + 1) - dp(1f), (barH - dp(2f)).toFloat())
                 canvas.drawRoundRect(cell, dp(6f).toFloat(), dp(6f).toFloat(), keyPaint)
             }
             textPaint.color = if (i == 0) theme.accentText else theme.keyText
