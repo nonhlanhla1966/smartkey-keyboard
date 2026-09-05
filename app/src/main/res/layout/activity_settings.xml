@@ -127,6 +127,25 @@
                 android:layout_height="wrap_content"
                 android:text="@string/setting_learning" />
 
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/switch_doublespace"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/setting_doublespace" />
+
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/switch_shortcuts"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/setting_shortcuts" />
+
+            <Button
+                android:id="@+id/btn_manage_shortcuts"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/setting_shortcuts_manage" />
+
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"

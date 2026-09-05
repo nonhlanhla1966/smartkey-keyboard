@@ -38,7 +38,8 @@ class ClipboardPanel(
         val a = anchor ?: return
         theme = ThemeConfig.byName(
             ctx.getSharedPreferences("smartkey", Context.MODE_PRIVATE).getString(SmartPrefs.KEY_THEME, ThemeConfig.KEY_LIGHT)
-                ?: ThemeConfig.KEY_LIGHT
+                ?: ThemeConfig.KEY_LIGHT,
+            ctx
         )
         val items = if (query.isBlank()) clipboard.items() else clipboard.search(query)
 

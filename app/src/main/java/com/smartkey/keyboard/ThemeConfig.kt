@@ -1,5 +1,7 @@
 package com.smartkey.keyboard
 
+import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Color
 
 data class Theme(
@@ -16,6 +18,7 @@ data class Theme(
 )
 
 object ThemeConfig {
+    const val KEY_SYSTEM = "system"
     const val KEY_LIGHT = "light"
     const val KEY_DARK = "dark"
     const val KEY_BLUE = "blue"
@@ -131,5 +134,13 @@ object ThemeConfig {
 
     val ALL = listOf(light(), dark(), blue(), green(), purple(), orange(), teal(), pink())
 
-    fun byName(name: String): Theme = ALL.firstOrNull { it.name.equals(name, true) } ?: light()
+    fun systemDark(ctx: Context): Boolean =
+        (ctx.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+
+    fun byName(name: String, isDark: Boolean = false): Theme {
+        if (name.equals(KEY_SYSTEM, true)) return if (isDark) dark() else light()
+        return ALL.firstOrNull { it.name.equals(name, true) } ?: light()
+    }
+
+    fun byName(name: String, ctx: Context): Theme = byName(name, systemDark(ctx))
 }

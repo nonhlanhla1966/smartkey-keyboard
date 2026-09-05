@@ -2,7 +2,9 @@ package com.smartkey.keyboard
 
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.inputmethodservice.InputMethodService
+import android.os.SystemClock
 import android.text.InputType
 import android.view.KeyEvent
 import android.view.View
@@ -13,6 +15,7 @@ class SmartKeyIME : InputMethodService(), KeyboardListener {
 
     private lateinit var prefs: SmartPrefs
     private lateinit var suggestions: SuggestionsEngine
+    private lateinit var shortcuts: TextShortcuts
     private lateinit var clipboard: SmartClipboard
     private lateinit var haptics: HapticManager
     private val sounds = SoundManager(this)
@@ -28,11 +31,16 @@ class SmartKeyIME : InputMethodService(), KeyboardListener {
     private var shiftState = 0
     private var capsLock = false
     private var privateMode = false
+    private var lastSpaceTime = 0L
+    private var emojiSearchActive = false
+    private var emojiQuery = ""
+    private val emojiResults = ArrayList<String>()
 
     override fun onCreate() {
         super.onCreate()
         prefs = SmartPrefs(this)
         suggestions = SuggestionsEngine(prefs)
+        shortcuts = TextShortcuts(prefs)
         clipboard = SmartClipboard(this, prefs)
         haptics = HapticManager(this)
         sounds.init()
@@ -41,7 +49,7 @@ class SmartKeyIME : InputMethodService(), KeyboardListener {
     override fun onCreateInputView(): View {
         val view = KeyboardView(this)
         view.listener = this
-        view.theme = ThemeConfig.byName(prefs.getString(SmartPrefs.KEY_THEME) ?: ThemeConfig.KEY_LIGHT)
+        view.theme = resolveTheme()
         keyboardView = view
         applyPrefsToView()
         applyModeToView(view)
@@ -55,7 +63,7 @@ class SmartKeyIME : InputMethodService(), KeyboardListener {
         val suggestionEnabled = prefs.getBoolean(SmartPrefs.KEY_SUGGESTIONS, true) && !privateMode
         keyboardView?.setShowSuggestions(suggestionEnabled)
         keyboardView?.let {
-            it.theme = ThemeConfig.byName(prefs.getString(SmartPrefs.KEY_THEME) ?: ThemeConfig.KEY_LIGHT)
+            it.theme = resolveTheme()
             it.typedPrefix = ""
             applyPrefsToView()
             applyModeToView(it)
@@ -76,7 +84,22 @@ class SmartKeyIME : InputMethodService(), KeyboardListener {
         capsLock = false
         capitalizeNext = true
         privateMode = false
+        lastSpaceTime = 0L
+        emojiSearchActive = false
+        emojiQuery = ""
+        emojiResults.clear()
+        keyboardView?.emojiSearchActive = false
+        keyboardView?.emojiQuery = ""
+        keyboardView?.emojiResults = emptyList()
         hidePanels()
+    }
+
+    private fun isSystemDark(): Boolean =
+        (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+
+    private fun resolveTheme(): Theme {
+        val name = prefs.getString(SmartPrefs.KEY_THEME) ?: ThemeConfig.KEY_LIGHT
+        return ThemeConfig.byName(name, isSystemDark())
     }
 
     private fun isPrivateField(info: EditorInfo): Boolean {
@@ -127,6 +150,11 @@ class SmartKeyIME : InputMethodService(), KeyboardListener {
             KeyKind.EMOJI_PREV -> keyboardView?.pageEmoji(-1)
             KeyKind.EMOJI_NEXT -> keyboardView?.pageEmoji(1)
             KeyKind.EMOJI_CATEGORY -> keyboardView?.setEmojiCategory(EmojiData.categoryIndexOf(spec.text))
+            KeyKind.EMOJI_SEARCH -> toggleEmojiSearch()
+            KeyKind.EMOJI_CLEAR -> {
+                emojiQuery = ""
+                updateEmojiResults()
+            }
             KeyKind.CLIPBOARD -> showClipboardPanel()
             KeyKind.TOOLS -> showToolsPanel()
             KeyKind.SETTINGS -> openSettings()
@@ -236,6 +264,12 @@ class SmartKeyIME : InputMethodService(), KeyboardListener {
 
     private fun onCharKey(text: String) {
         if (text.isBlank()) return
+        if (emojiSearchActive) {
+            if (text.length == 1 && (text[0].isLetterOrDigit() || text[0] == ' ')) {
+                appendToEmojiQuery(text[0].lowercaseChar())
+            }
+            return
+        }
         if (currentMode == KeyboardLayout.MODE_CALC) {
             calculator.append(text)
             keyboardView?.invalidate()
@@ -268,11 +302,16 @@ class SmartKeyIME : InputMethodService(), KeyboardListener {
             if (shiftState == 1) shiftState = 0
         } else {
             if (text in listOf(".", "!", "?")) {
-                maybeAutocorrect()
-                commitWordToLearning()
+                if (!maybeExpandShortcut()) {
+                    maybeAutocorrect()
+                    commitWordToLearning()
+                }
                 capitalizeNext = true
             } else if (!(text.firstOrNull()?.isLetterOrDigit() ?: false)) {
-                commitWordToLearning()
+                if (!maybeExpandShortcut()) {
+                    maybeAutocorrect()
+                    commitWordToLearning()
+                }
             }
         }
         updateViewShift()
@@ -296,6 +335,13 @@ class SmartKeyIME : InputMethodService(), KeyboardListener {
 
     private fun onBackspace() {
         wordBuffer = StringBuilder()
+        if (emojiSearchActive) {
+            if (emojiQuery.isNotEmpty()) {
+                emojiQuery = emojiQuery.dropLast(1)
+                updateEmojiResults()
+            }
+            return
+        }
         val ic = currentInputConnection ?: return
         val before = ic.getTextBeforeCursor(1, 0)?.toString() ?: ""
         ic.deleteSurroundingText(1, 0)
@@ -304,16 +350,64 @@ class SmartKeyIME : InputMethodService(), KeyboardListener {
     }
 
     private fun onSpace() {
-        maybeAutocorrect()
-        commitWordToLearning()
+        if (emojiSearchActive) {
+            if (emojiQuery.isNotBlank() && !emojiQuery.endsWith(" ")) {
+                emojiQuery += " "
+                updateEmojiResults()
+            }
+            return
+        }
+        if (!maybeExpandShortcut()) {
+            maybeAutocorrect()
+            commitWordToLearning()
+        }
         val ic = currentInputConnection ?: return
+        val now = SystemClock.elapsedRealtime()
+        val doubleSpace = prefs.getBoolean(SmartPrefs.KEY_DOUBLE_SPACE, true) && !privateMode &&
+            now - lastSpaceTime < 600
         val before = ic.getTextBeforeCursor(1, 0)?.toString() ?: ""
+        lastSpaceTime = now
+        if (doubleSpace && before == " ") {
+            ic.beginBatchEdit()
+            try {
+                ic.deleteSurroundingText(1, 0)
+                ic.commitText(". ", 1)
+            } finally {
+                ic.endBatchEdit()
+            }
+            capitalizeNext = true
+            wordBuffer = StringBuilder()
+            updateViewShift()
+            updateCandidates()
+            return
+        }
         ic.commitText(" ", 1)
         val lastChar = before.lastOrNull()
         capitalizeNext = lastChar == '.' || lastChar == '!' || lastChar == '?' || lastChar == '\n'
         wordBuffer = StringBuilder()
         updateViewShift()
         updateCandidates()
+    }
+
+    private fun maybeExpandShortcut(): Boolean {
+        if (privateMode) return false
+        if (!prefs.getBoolean(SmartPrefs.KEY_SHORTCUTS_ENABLED, true)) return false
+        val ic = currentInputConnection ?: return false
+        val typed = wordBuffer.toString()
+        if (typed.isBlank()) return false
+        val replacement = shortcuts.expand(typed) ?: return false
+        val before = ic.getTextBeforeCursor(typed.length, 0)?.toString()
+        if (before != typed) return false
+        ic.beginBatchEdit()
+        try {
+            ic.deleteSurroundingText(typed.length, 0)
+            ic.commitText(replacement, 1)
+        } finally {
+            ic.endBatchEdit()
+        }
+        wordBuffer = StringBuilder()
+        refreshSuggestions()
+        return true
     }
 
     /**
@@ -342,8 +436,19 @@ class SmartKeyIME : InputMethodService(), KeyboardListener {
     }
 
     private fun onEnter() {
-        maybeAutocorrect()
-        commitWordToLearning()
+        if (emojiSearchActive) {
+            val first = emojiResults.firstOrNull()
+            if (first != null) {
+                commitEmoji(first)
+            } else {
+                exitEmojiSearch()
+            }
+            return
+        }
+        if (!maybeExpandShortcut()) {
+            maybeAutocorrect()
+            commitWordToLearning()
+        }
         val ic = currentInputConnection ?: return
         val editor = currentInputEditorInfo
         val action = editor?.imeOptions?.and(EditorInfo.IME_MASK_ACTION) ?: EditorInfo.IME_ACTION_UNSPECIFIED
@@ -368,9 +473,65 @@ class SmartKeyIME : InputMethodService(), KeyboardListener {
         if (text.isNotBlank()) {
             currentInputConnection?.commitText(text, 1)
         }
+        if (emojiSearchActive) {
+            exitEmojiSearch()
+        }
+    }
+
+    private fun toggleEmojiSearch() {
+        if (emojiSearchActive) {
+            exitEmojiSearch()
+            return
+        }
+        emojiSearchActive = true
+        emojiQuery = ""
+        emojiResults.clear()
+        keyboardView?.emojiQuery = ""
+        keyboardView?.emojiResults = emptyList()
+        keyboardView?.emojiSearchActive = true
+        switchMode(KeyboardLayout.MODE_LETTERS)
+        keyboardView?.setShowSuggestions(false)
+        updateEmojiResults()
+    }
+
+    private fun appendToEmojiQuery(ch: Char) {
+        if (emojiQuery.length >= 24) return
+        emojiQuery += ch
+        updateEmojiResults()
+    }
+
+    private fun updateEmojiResults() {
+        emojiResults.clear()
+        val results = EmojiData.search(emojiQuery)
+        emojiResults.addAll(results)
+        keyboardView?.emojiQuery = emojiQuery
+        keyboardView?.emojiResults = results
+    }
+
+    private fun commitEmoji(text: String) {
+        currentInputConnection?.commitText(text, 1)
+        exitEmojiSearch()
+    }
+
+    private fun exitEmojiSearch() {
+        emojiSearchActive = false
+        emojiQuery = ""
+        emojiResults.clear()
+        keyboardView?.emojiSearchActive = false
+        keyboardView?.emojiQuery = ""
+        keyboardView?.emojiResults = emptyList()
+        switchMode(KeyboardLayout.MODE_EMOJI)
     }
 
     private fun switchMode(newMode: Int) {
+        if (newMode != KeyboardLayout.MODE_LETTERS) {
+            emojiSearchActive = false
+            emojiQuery = ""
+            emojiResults.clear()
+            keyboardView?.emojiSearchActive = false
+            keyboardView?.emojiQuery = ""
+            keyboardView?.emojiResults = emptyList()
+        }
         currentMode = newMode
         val view = keyboardView ?: return
         view.mode = newMode
@@ -414,6 +575,15 @@ class SmartKeyIME : InputMethodService(), KeyboardListener {
     override fun onSuggestion(text: String) {
         feedback()
         hidePanels()
+        if (emojiSearchActive) {
+            if (text == KeyboardView.SEARCH_CLEAR) {
+                emojiQuery = ""
+                updateEmojiResults()
+            } else {
+                commitEmoji(text)
+            }
+            return
+        }
         val ic = currentInputConnection ?: return
         val prefixLen = wordBuffer.length
         if (prefixLen > 0) {
@@ -564,6 +734,15 @@ class SmartKeyIME : InputMethodService(), KeyboardListener {
         keyboardView?.let {
             it.typedPrefix = ""
             it.suggestions = emptyList()
+        }
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        val themeName = prefs.getString(SmartPrefs.KEY_THEME) ?: ThemeConfig.KEY_LIGHT
+        if (themeName.equals(ThemeConfig.KEY_SYSTEM, true)) {
+            keyboardView?.theme = resolveTheme()
+            keyboardView?.invalidate()
         }
     }
 

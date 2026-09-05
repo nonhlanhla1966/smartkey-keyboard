@@ -53,6 +53,9 @@ class SmartPrefs private constructor(
         const val KEY_AUTOCORRECT = "autocorrect"
         const val KEY_ONE_HANDED = "one_handed"
         const val KEY_LANDSCAPE_NUMROW = "landscape_numrow"
+        const val KEY_DOUBLE_SPACE = "double_space_period"
+        const val KEY_SHORTCUTS_ENABLED = "shortcuts_enabled"
+        const val KEY_SHORTCUTS = "text_shortcuts"
     }
 }
 

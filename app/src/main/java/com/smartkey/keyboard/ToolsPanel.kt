@@ -37,7 +37,7 @@ class ToolsPanel(private val ctx: Context) {
         dismiss()
         this.callbacks = callbacks
         val prefs = ctx.getSharedPreferences("smartkey", Context.MODE_PRIVATE)
-        val theme = ThemeConfig.byName(prefs.getString(SmartPrefs.KEY_THEME, ThemeConfig.KEY_LIGHT) ?: ThemeConfig.KEY_LIGHT)
+        val theme = ThemeConfig.byName(prefs.getString(SmartPrefs.KEY_THEME, ThemeConfig.KEY_LIGHT) ?: ThemeConfig.KEY_LIGHT, ctx)
 
         val scroll = ScrollView(ctx)
         scroll.setBackgroundColor(theme.panel)

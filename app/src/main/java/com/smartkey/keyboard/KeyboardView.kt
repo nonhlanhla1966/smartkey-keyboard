@@ -76,6 +76,23 @@ class KeyboardView @JvmOverloads constructor(
     var emojiPage = 0
         private set
 
+    var emojiSearchActive = false
+        set(value) {
+            field = value
+            layoutKeys()
+            invalidate()
+        }
+    var emojiQuery = ""
+        set(value) {
+            field = value
+            invalidate()
+        }
+    var emojiResults: List<String> = emptyList()
+        set(value) {
+            field = value
+            invalidate()
+        }
+
     private var showSuggestions = true
 
     private class RK(var spec: KeySpec, var x: Int, var y: Int, var w: Int, var h: Int) {
@@ -105,6 +122,13 @@ class KeyboardView @JvmOverloads constructor(
 
     private fun dp(v: Float): Int = (v * dp).toInt()
     private fun sp(v: Float): Float = v * sp
+
+    private val queryW: Float get() = dp(150f).toFloat()
+    private val clearW: Float get() = dp(28f).toFloat()
+    private val matchesX: Float get() = queryW + clearW + dp(6f)
+
+    private fun suggestionsBarHeight(): Int =
+        if (emojiSearchActive && mode == KeyboardLayout.MODE_LETTERS) dp(76f) else suggestionsBarH
 
     private val LONG_PRESS_MS = 400L
 
@@ -212,10 +236,11 @@ class KeyboardView @JvmOverloads constructor(
     }
 
     private fun layoutNormal(w: Int, h: Int) {
-        keys.add(RK(KeySpec(KeyKind.SPACE), 0, 0, w, suggestionsBarH))
+        val sbH = suggestionsBarHeight()
+        keys.add(RK(KeySpec(KeyKind.SPACE), 0, 0, w, sbH))
         val numberRow = numberRowEnabled || isLandscape
         val rows = KeyboardLayout.rowsFor(mode, numberRow)
-        val totalH = h - suggestionsBarH
+        val totalH = h - sbH
         val rowsH = (totalH / rows.size * keyHeightMult).toInt().coerceAtLeast(dp(28f))
         val usedH = rowsH * rows.size + keyGap * (rows.size - 1)
         val top0 = suggestionsBarH + ((totalH - usedH) / 2).coerceAtLeast(0)
@@ -271,7 +296,7 @@ class KeyboardView @JvmOverloads constructor(
         }
         val actionY = catY + categoryBarH
         val actionRow = listOf(
-            KeySpec(KeyKind.HIDE, "▾"), KeySpec(KeyKind.MODE_LETTERS, "abc"),
+            KeySpec(KeyKind.EMOJI_SEARCH, "🔍"), KeySpec(KeyKind.HIDE, "▾"), KeySpec(KeyKind.MODE_LETTERS, "abc"),
             KeySpec(KeyKind.CLIPBOARD, "⧉"), KeySpec(KeyKind.BACKSPACE, "⌫"),
             KeySpec(KeyKind.ENTER, "⏎")
         )
@@ -298,8 +323,13 @@ class KeyboardView @JvmOverloads constructor(
         when (mode) {
             KeyboardLayout.MODE_LETTERS, KeyboardLayout.MODE_SYMBOLS_1, KeyboardLayout.MODE_SYMBOLS_2 -> {
                 panelPaint.color = theme.panel
-                canvas.drawRect(0f, 0f, width.toFloat(), suggestionsBarH.toFloat(), panelPaint)
-                drawSuggestionsBar(canvas)
+                val barH = suggestionsBarHeight()
+                canvas.drawRect(0f, 0f, width.toFloat(), barH.toFloat(), panelPaint)
+                if (emojiSearchActive && mode == KeyboardLayout.MODE_LETTERS) {
+                    drawEmojiSearchBar(canvas, barH)
+                } else {
+                    drawSuggestionsBar(canvas)
+                }
             }
             KeyboardLayout.MODE_CALC -> {
                 panelPaint.color = theme.panel
@@ -328,6 +358,54 @@ class KeyboardView @JvmOverloads constructor(
             val label = s[i]
             val cx = startX + cellW * i + cellW / 2f
             canvas.drawText(label, cx - textPaint.measureText(label) / 2f, suggestionsBarH / 2f - (textPaint.ascent() + textPaint.descent()) / 2f, textPaint)
+        }
+    }
+
+    private fun drawEmojiSearchBar(canvas: Canvas, barH: Int) {
+        val cy = barH / 2f - (hintPaint.ascent() + hintPaint.descent()) / 2f
+
+        hintPaint.textSize = sp(12f)
+        if (emojiQuery.isBlank()) {
+            hintPaint.color = theme.dimText
+            canvas.drawText(SEARCH_PLACEHOLDER, (margin + dp(8f)).toFloat(), cy, hintPaint)
+        } else {
+            hintPaint.color = theme.accent
+            val shown = if (emojiQuery.length > 18) emojiQuery.take(17) + "…" else emojiQuery
+            canvas.drawText("🔍  " + shown, (margin + dp(4f)).toFloat(), cy, hintPaint)
+        }
+
+        if (emojiQuery.isNotEmpty()) {
+            panelPaint.color = theme.keyDark
+            canvas.drawRoundRect(
+                RectF(queryW + dp(4f), barH / 2f - dp(10f), queryW + clearW - dp(4f), barH / 2f + dp(10f)),
+                dp(6f).toFloat(), dp(6f).toFloat(), panelPaint
+            )
+            hintPaint.color = theme.keyText
+            hintPaint.textSize = sp(14f)
+            canvas.drawText("✕", queryW + clearW / 2f - hintPaint.measureText("✕") / 2f, cy, hintPaint)
+        }
+
+        val list = emojiResults
+        if (list.isEmpty()) {
+            if (emojiQuery.isNotBlank()) {
+                hintPaint.color = theme.dimText
+                hintPaint.textSize = sp(11f)
+                canvas.drawText("no matches", matchesX, cy, hintPaint)
+            }
+            return
+        }
+        val avail = (width - matchesX - margin).toFloat()
+        val cellW = avail / list.size
+        textPaint.textSize = sp(18f)
+        for (i in list.indices) {
+            val cx = matchesX + cellW * i + cellW / 2f
+            if (i == 0) {
+                keyPaint.color = theme.accent
+                val cell = RectF(matchesX + cellW * i + dp(1f), dp(2f), matchesX + cellW * (i + 1) - dp(1f), (barH - dp(2f)).toFloat())
+                canvas.drawRoundRect(cell, dp(6f).toFloat(), dp(6f).toFloat(), keyPaint)
+            }
+            textPaint.color = if (i == 0) theme.accentText else theme.keyText
+            canvas.drawText(list[i], cx - textPaint.measureText(list[i]) / 2f, barH / 2f - (textPaint.ascent() + textPaint.descent()) / 2f, textPaint)
         }
     }
 
@@ -425,6 +503,8 @@ class KeyboardView @JvmOverloads constructor(
         KeyKind.EMOJI_PREV -> "◀"
         KeyKind.EMOJI_NEXT -> "▶"
         KeyKind.EMOJI_CATEGORY -> spec.text
+        KeyKind.EMOJI_SEARCH -> "🔍"
+        KeyKind.EMOJI_CLEAR -> "✕"
         KeyKind.CALC_AC -> "AC"
         KeyKind.CALC_BSP -> "⌫"
         KeyKind.CALC_EQUALS -> "="
@@ -632,14 +712,15 @@ class KeyboardView @JvmOverloads constructor(
 
     private fun containsKeySuggestion(x: Float, y: Float): Boolean {
         if (mode == KeyboardLayout.MODE_LETTERS || mode == KeyboardLayout.MODE_SYMBOLS_1 || mode == KeyboardLayout.MODE_SYMBOLS_2) {
-            return y <= suggestionsBarH
+            return y <= suggestionsBarHeight()
         }
         return false
     }
 
     private fun suggestionAt(x: Float, y: Float): String? {
+        if (y > suggestionsBarHeight()) return null
+        if (emojiSearchActive) return searchHitAt(x, y)
         val s = suggestions
-        if (y > suggestionsBarH) return null
         if (s.isEmpty()) return null
         val startX = dp(120f) + if (typedPrefix.isBlank()) 0 else dp(60f)
         val cellW = (width - startX - margin) / s.size
@@ -647,6 +728,20 @@ class KeyboardView @JvmOverloads constructor(
             val sx = startX + cellW * i
             if (x >= sx && x <= sx + cellW) return s[i]
         }
+        return null
+    }
+
+    private fun searchHitAt(x: Float, y: Float): String? {
+        val sbH = suggestionsBarHeight()
+        if (y > sbH) return null
+        if (emojiQuery.isNotEmpty() && x >= queryW && x <= queryW + clearW) return SEARCH_CLEAR
+        if (x < matchesX) return null
+        val list = emojiResults
+        if (list.isEmpty()) return null
+        val avail = (width - matchesX - margin).toFloat()
+        val cellW = avail / list.size
+        val i = ((x - matchesX) / cellW).toInt()
+        if (i in list.indices) return list[i]
         return null
     }
 
@@ -669,12 +764,15 @@ class KeyboardView @JvmOverloads constructor(
     }
 
     companion object {
+        const val SEARCH_CLEAR = "\uFFF0"
+        private const val SEARCH_PLACEHOLDER = "🔍  Search emoji (heart, dog, money…)"
         private val SPECIAL = setOf(
             KeyKind.SHIFT, KeyKind.BACKSPACE, KeyKind.ENTER, KeyKind.SPACE,
             KeyKind.MODE_LETTERS, KeyKind.MODE_SYMBOLS_1, KeyKind.MODE_SYMBOLS_2,
             KeyKind.MODE_EMOJI, KeyKind.MODE_CALC, KeyKind.SETTINGS, KeyKind.CLIPBOARD,
             KeyKind.TOOLS, KeyKind.HIDE, KeyKind.EMOJI_PREV, KeyKind.EMOJI_NEXT,
-            KeyKind.EMOJI_CATEGORY, KeyKind.CALC_AC, KeyKind.CALC_BSP,
+            KeyKind.EMOJI_CATEGORY, KeyKind.EMOJI_SEARCH, KeyKind.EMOJI_CLEAR,
+            KeyKind.CALC_AC, KeyKind.CALC_BSP,
             KeyKind.CALC_EQUALS, KeyKind.CALC_OP,
             KeyKind.CURSOR_LEFT, KeyKind.CURSOR_RIGHT, KeyKind.CURSOR_HOME, KeyKind.CURSOR_END,
             KeyKind.COPY, KeyKind.CUT, KeyKind.PASTE, KeyKind.SELECT_ALL, KeyKind.UNDO, KeyKind.REDO,

@@ -37,6 +37,14 @@
             android:windowSoftInputMode="stateHidden">
         </activity>
 
+        <activity
+            android:name=".ShortcutsActivity"
+            android:exported="true"
+            android:label="@string/shortcuts_title"
+            android:theme="@style/Theme.SmartKey"
+            android:windowSoftInputMode="stateHidden">
+        </activity>
+
         <service
             android:name=".SmartKeyIME"
             android:exported="true"

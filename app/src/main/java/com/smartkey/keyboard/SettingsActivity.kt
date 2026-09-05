@@ -32,6 +32,9 @@ class SettingsActivity : AppCompatActivity() {
         val switchAutocap = findViewById<MaterialSwitch>(R.id.switch_autocap)
         val switchAutocorrect = findViewById<MaterialSwitch>(R.id.switch_autocorrect)
         val switchLearning = findViewById<MaterialSwitch>(R.id.switch_learning)
+        val switchDoubleSpace = findViewById<MaterialSwitch>(R.id.switch_doublespace)
+        val switchShortcuts = findViewById<MaterialSwitch>(R.id.switch_shortcuts)
+        val btnShortcuts = findViewById<Button>(R.id.btn_manage_shortcuts)
         val switchNumberRow = findViewById<MaterialSwitch>(R.id.switch_numberrow)
         val spinnerKeyHeight = findViewById<Spinner>(R.id.spinner_keyheight)
         val spinnerOneHanded = findViewById<Spinner>(R.id.spinner_onehanded)
@@ -55,15 +58,18 @@ class SettingsActivity : AppCompatActivity() {
         switchAutocap.isChecked = prefs.getBoolean(SmartPrefs.KEY_AUTOCAP, true)
         switchAutocorrect.isChecked = prefs.getBoolean(SmartPrefs.KEY_AUTOCORRECT, true)
         switchLearning.isChecked = prefs.getBoolean(SmartPrefs.KEY_LEARNING, true)
+        switchDoubleSpace.isChecked = prefs.getBoolean(SmartPrefs.KEY_DOUBLE_SPACE, true)
+        switchShortcuts.isChecked = prefs.getBoolean(SmartPrefs.KEY_SHORTCUTS_ENABLED, true)
         switchNumberRow.isChecked = prefs.getBoolean(SmartPrefs.KEY_NUMBER_ROW, false)
         switchClipboard.isChecked = prefs.getBoolean(SmartPrefs.KEY_CLIPBOARD_ENABLED, false)
 
-        val themeNames = ThemeConfig.ALL.map { it.name }
-        val themeAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, themeNames)
+        val themeKeys = listOf(ThemeConfig.KEY_SYSTEM) + ThemeConfig.ALL.map { it.name }
+        val themeLabels = listOf(getString(R.string.setting_theme_system)) + ThemeConfig.ALL.map { it.name.replaceFirstChar { c -> c.titlecase() } }
+        val themeAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, themeLabels)
         themeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         spinnerTheme.adapter = themeAdapter
         val currentTheme = prefs.getString(SmartPrefs.KEY_THEME) ?: ThemeConfig.KEY_LIGHT
-        spinnerTheme.setSelection(themeNames.indexOf(currentTheme).coerceAtLeast(0))
+        spinnerTheme.setSelection(themeKeys.indexOf(currentTheme).coerceAtLeast(0))
 
         val hours = intArrayOf(1, 6, 12, 24, 72)
         val hourAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, hours.map { it.toString() })
@@ -102,7 +108,7 @@ class SettingsActivity : AppCompatActivity() {
 
         spinnerTheme.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
-                prefs.putString(SmartPrefs.KEY_THEME, themeNames[position])
+                prefs.putString(SmartPrefs.KEY_THEME, themeKeys[position])
             }
 
             override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {
@@ -114,6 +120,11 @@ class SettingsActivity : AppCompatActivity() {
         switchAutocap.setOnCheckedChangeListener { _, checked -> prefs.putBoolean(SmartPrefs.KEY_AUTOCAP, checked) }
         switchAutocorrect.setOnCheckedChangeListener { _, checked -> prefs.putBoolean(SmartPrefs.KEY_AUTOCORRECT, checked) }
         switchLearning.setOnCheckedChangeListener { _, checked -> prefs.putBoolean(SmartPrefs.KEY_LEARNING, checked) }
+        switchDoubleSpace.setOnCheckedChangeListener { _, checked -> prefs.putBoolean(SmartPrefs.KEY_DOUBLE_SPACE, checked) }
+        switchShortcuts.setOnCheckedChangeListener { _, checked -> prefs.putBoolean(SmartPrefs.KEY_SHORTCUTS_ENABLED, checked) }
+        btnShortcuts.setOnClickListener {
+            startActivity(Intent(this, ShortcutsActivity::class.java))
+        }
         switchNumberRow.setOnCheckedChangeListener { _, checked -> prefs.putBoolean(SmartPrefs.KEY_NUMBER_ROW, checked) }
         switchClipboard.setOnCheckedChangeListener { _, checked ->
             prefs.putBoolean(SmartPrefs.KEY_CLIPBOARD_ENABLED, checked)
