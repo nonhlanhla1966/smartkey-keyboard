@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <input-method xmlns:android="http://schemas.android.com/apk/res/android">
+    <meta-data
+        android:name="android.ime.settingsactivity"
+        android:value=".SettingsActivity" />
     <subtype
         android:imeSubtypeExtraValue="KeyboardLayoutSet=smartkey"
         android:imeSubtypeLocale="en_US"

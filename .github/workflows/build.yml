@@ -59,16 +59,22 @@ jobs:
           if-no-files-found: error
 
       - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.1.0
-          name: SmartKey Keyboard v1.1.0
+          tag_name: ${{ github.ref_name }}
+          name: SmartKey Keyboard ${{ github.ref_name }}
           body: |
-            SmartKey Keyboard v1.1.0
+            SmartKey Keyboard ${{ github.ref_name }}
 
             Release build of the SmartKey Keyboard Android input method.
 
-            What's new in 1.1.0:
+            What's new in 1.1.1:
+            - Fixed: SmartKey now declares its settings screen (android.ime.settingsactivity),
+              so tapping "SmartKey Keyboard" in Android → On-screen keyboard opens the SmartKey
+              settings and the keyboard can be enabled and set as default from Settings.
+
+            Changes from 1.1.0:
             - Double-tap space to insert a period (toggleable in settings)
             - Text shortcuts / snippets: type a short code and it expands to full text
               (e.g. "omw" → "on my way"), fully manageable from a new shortcuts screen
