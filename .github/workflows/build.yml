@@ -68,22 +68,35 @@ jobs:
 
       - name: Verify IME config ships without KeyboardLayoutSet
         run: |
+          set -e
           BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
           APK=app/build/outputs/apk/release/app-release.apk
-          "$BT/aapt" dump xmltree "$APK" res/xml/method.xml > /tmp/method.txt
+          echo "== res/ layout sample in built APK =="
+          unzip -Z1 "$APK" | grep -E '^res/' | head -20
+          echo "== locating the input-method XML by content =="
+          METHOD_FILE=""
+          for f in $(unzip -Z1 "$APK" | grep -E '\.xml$' | grep -v 'AndroidManifest.xml'); do
+            if "$BT/aapt" dump xmltree "$APK" "$f" 2>/dev/null | grep -q "E: input-method"; then
+              METHOD_FILE="$f"
+              break
+            fi
+          done
+          [ -n "$METHOD_FILE" ] || { echo "FAIL: no input-method XML found in APK" >&2; exit 1; }
+          echo "IME config is: $METHOD_FILE"
+          "$BT/aapt" dump xmltree "$APK" "$METHOD_FILE" > /tmp/method.txt
+          cat /tmp/method.txt
           if grep -q "KeyboardLayoutSet" /tmp/method.txt; then
             echo "FAIL: shipped method.xml still contains KeyboardLayoutSet" >&2
             exit 1
           fi
           echo "OK: shipped method.xml has no KeyboardLayoutSet claim"
-          for needle in "input-method" "supportsSwitchingToNextInputMethod" "subtype" "imeSubtypeLocale" "languageTag=.*en-US" "android:icon"; do
+          for needle in "E: input-method" "supportsSwitchingToNextInputMethod" "E: subtype" "imeSubtypeLocale" "languageTag.*en-US" "android:icon"; do
             if ! grep -Eq "$needle" /tmp/method.txt; then
               echo "FAIL: method.xml missing $needle" >&2
               exit 1
             fi
           done
           echo "OK: method.xml has supportsSwitchingToNextInputMethod, subtype icon, imeSubtypeLocale and languageTag=en-US"
-          grep -E "input-method|supportsSwitchingToNextInputMethod|subtype|imeSubtypeLocale|languageTag|icon" /tmp/method.txt
 
       - name: Verify APK signature is valid
         run: |
