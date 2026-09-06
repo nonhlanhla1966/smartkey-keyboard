@@ -34,6 +34,25 @@
             android:text="@string/main_subtitle"
             android:textSize="15sp" />
 
+        <TextView
+            android:id="@+id/tv_ime_status_label"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/main_ime_status_checking"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:textColor="@color/primary" />
+
+        <TextView
+            android:id="@+id/tv_ime_status_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="4dp"
+            android:paddingBottom="16dp"
+            android:text="@string/main_ime_status_checking_body"
+            android:textSize="13sp"
+            android:lineSpacingExtra="3dp" />
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_enable_keyboard"
             android:layout_width="match_parent"

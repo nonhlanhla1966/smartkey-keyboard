@@ -69,7 +69,15 @@ jobs:
 
             Release build of the SmartKey Keyboard Android input method.
 
-            What's new in 1.1.1:
+            What's new in 1.1.2:
+            - IME registration repair: removed the unsupported "KeyboardLayoutSet" subtype
+              claim, declared supportsSwitchingToNextInputMethod, added a proper subtype icon
+              and language tag so OEM keyboard lists surface SmartKey reliably
+            - The SmartKey launcher now shows live Android registration status (registered,
+              enabled, or missing) plus a one-tap enable shortcut, so you can verify the IME
+              is accepted by Android after installing
+
+            Changes from 1.1.1:
             - Fixed: SmartKey now declares its settings screen (android.ime.settingsactivity),
               so tapping "SmartKey Keyboard" in Android → On-screen keyboard opens the SmartKey
               settings and the keyboard can be enabled and set as default from Settings.
