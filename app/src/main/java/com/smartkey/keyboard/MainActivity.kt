@@ -44,6 +44,19 @@ class MainActivity : AppCompatActivity() {
 
         val registered: InputMethodInfo? = allMethods.firstOrNull { it.id == IME_ID }
         val enabled: InputMethodInfo? = enabledMethods.firstOrNull { it.id == IME_ID }
+        val secureEnabled = runCatching {
+            Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_INPUT_METHODS) ?: ""
+        }.getOrDefault("")
+        val secureHasIme = secureEnabled.contains(IME_ID)
+
+        findViewById<TextView>(R.id.tv_diag_registered).text =
+            getString(R.string.main_diag_registered, if (registered != null) "YES" else "NO")
+        findViewById<TextView>(R.id.tv_diag_imm).text =
+            getString(R.string.main_diag_imm, if (registered != null) "YES" else "NO")
+        findViewById<TextView>(R.id.tv_diag_enabled).text =
+            getString(R.string.main_diag_enabled, if (enabled != null) "YES" else "NO")
+        findViewById<TextView>(R.id.tv_diag_secure).text =
+            getString(R.string.main_diag_secure, if (secureHasIme) "YES" else "NO")
 
         val statusLabel = findViewById<TextView>(R.id.tv_ime_status_label)
         val statusText = findViewById<TextView>(R.id.tv_ime_status_text)

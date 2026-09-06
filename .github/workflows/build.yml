@@ -40,11 +40,47 @@ jobs:
           ls app/build/test-results/testDebugUnitTest/*.xml
           echo "== Badging =="
           "$BT/aapt" dump badging "$APK" | grep -E "package:|launchable-activity|sdkVersion|targetSdkVersion"
+          echo "== Version assertions =="
+          "$BT/aapt" dump badging "$APK" > /tmp/badging.txt
+          grep -E "package: name='com.smartkey.keyboard' versionCode='5' versionName='1.1.3'" /tmp/badging.txt \
+            || { echo "FAIL: expected versionCode 5 / versionName 1.1.3" >&2; exit 1; }
+          echo "OK: versionCode 5 / versionName 1.1.3"
+          echo "== Launcher diagnostics in dex =="
+          unzip -o -q "$APK" classes.dex -d /tmp/apkdex
+          if ! strings /tmp/apkdex/classes.dex | grep -q "updateRegistrationStatus"; then
+            echo "FAIL: launcher diagnostics (updateRegistrationStatus) missing from dex" >&2
+            exit 1
+          fi
+          echo "OK: updateRegistrationStatus present in dex"
+          if strings /tmp/apkdex/classes.dex | grep -q "Open System Settings"; then
+            echo "FAIL: stale launcher inline toast string still present in dex" >&2
+            exit 1
+          fi
+          echo "OK: no stale launcher string in dex"
           echo "== Service registration =="
           "$BT/aapt" dump xmltree "$APK" AndroidManifest.xml | grep -B1 -A10 "^      E: service " | head -20
           echo "== APK size =="
           ls -l "$APK"
           sha256sum "$APK"
+
+      - name: Verify IME config ships without KeyboardLayoutSet
+        run: |
+          BT="$ANDROID_HOME/build-tools/$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -1)"
+          APK=app/build/outputs/apk/release/app-release.apk
+          "$BT/aapt" dump xmltree "$APK" res/xml/method.xml > /tmp/method.txt
+          if grep -q "KeyboardLayoutSet" /tmp/method.txt; then
+            echo "FAIL: shipped method.xml still contains KeyboardLayoutSet" >&2
+            exit 1
+          fi
+          echo "OK: shipped method.xml has no KeyboardLayoutSet claim"
+          for needle in "input-method" "supportsSwitchingToNextInputMethod" "subtype" "imeSubtypeLocale" "languageTag=.*en-US" "android:icon"; do
+            if ! grep -Eq "$needle" /tmp/method.txt; then
+              echo "FAIL: method.xml missing $needle" >&2
+              exit 1
+            fi
+          done
+          echo "OK: method.xml has supportsSwitchingToNextInputMethod, subtype icon, imeSubtypeLocale and languageTag=en-US"
+          grep -E "input-method|supportsSwitchingToNextInputMethod|subtype|imeSubtypeLocale|languageTag|icon" /tmp/method.txt
 
       - name: Verify APK signature is valid
         run: |

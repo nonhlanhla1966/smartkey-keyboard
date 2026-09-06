@@ -83,9 +83,14 @@
     <string name="main_ime_status_not_registered">SmartKey Keyboard is NOT registered with Android</string>
     <string name="main_ime_status_not_registered_body">Android did not find the SmartKey input method service. Reinstall the APK (the latest version fixes the IME registration) and reopen this screen. If it still says this, uninstall, restart the phone, and install again.</string>
     <string name="main_settings_unavailable">Could not open keyboard settings. Open Android Settings → System → Languages &amp; input manually.</string>
+    <string name="main_diag_header">Android diagnostic (temporary)</string>
+    <string name="main_diag_registered">IME registered: %1$s</string>
+    <string name="main_diag_imm">SmartKeyIME found in InputMethodManager: %1$s</string>
+    <string name="main_diag_enabled">IME enabled (InputMethodManager): %1$s</string>
+    <string name="main_diag_secure">In Settings.Secure ENABLED_INPUT_METHODS: %1$s</string>
     <string name="main_privacy_header">Your privacy</string>
     <string name="main_privacy_body">SmartKey Keyboard works completely offline. It has no internet permission, shows no ads, does not track you, and never stores password contents. Typing suggestions, clipboard history, themes and settings all stay on this device.</string>
-    <string name="main_version">Version 1.1.2</string>
+    <string name="main_version">Version 1.1.3</string>
 
     <string name="setting_layout">Keyboard layout</string>
     <string name="setting_numberrow">Number row</string>
@@ -116,7 +121,7 @@
     <string name="setting_clipboard_clear">Clear clipboard history</string>
     <string name="setting_clipboard_cleared">Clipboard history cleared</string>
     <string name="setting_about">About</string>
-    <string name="setting_about_body">SmartKey Keyboard v1.1.2 — offline-first input method for Android 8+.</string>
+    <string name="setting_about_body">SmartKey Keyboard v1.1.3 — offline-first input method for Android 8+.</string>
     <string name="setting_privacy_statement">No internet permission. No ads. No analytics. No keystroke logging. Clipboard memory is optional, encrypted on-device, and never stores password contents.</string>
 
     <string name="clipboard_search">Search copies…</string>

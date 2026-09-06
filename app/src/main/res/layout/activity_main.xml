@@ -53,6 +53,45 @@
             android:textSize="13sp"
             android:lineSpacingExtra="3dp" />
 
+        <TextView
+            android:id="@+id/tv_diag_header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingBottom="2dp"
+            android:text="@string/main_diag_header"
+            android:textColor="@color/primary"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tv_diag_registered"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/main_diag_registered"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tv_diag_imm"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/main_diag_imm"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tv_diag_enabled"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/main_diag_enabled"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tv_diag_secure"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingBottom="16dp"
+            android:text="@string/main_diag_secure"
+            android:textSize="13sp" />
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_enable_keyboard"
             android:layout_width="match_parent"
