@@ -42,9 +42,9 @@ jobs:
           "$BT/aapt" dump badging "$APK" | grep -E "package:|launchable-activity|sdkVersion|targetSdkVersion"
           echo "== Version assertions =="
           "$BT/aapt" dump badging "$APK" > /tmp/badging.txt
-          grep -E "package: name='com.smartkey.keyboard' versionCode='5' versionName='1.1.3'" /tmp/badging.txt \
-            || { echo "FAIL: expected versionCode 5 / versionName 1.1.3" >&2; exit 1; }
-          echo "OK: versionCode 5 / versionName 1.1.3"
+          grep -E "package: name='com.smartkey.keyboard' versionCode='6' versionName='1.1.4'" /tmp/badging.txt \
+            || { echo "FAIL: expected versionCode 6 / versionName 1.1.4" >&2; exit 1; }
+          echo "OK: versionCode 6 / versionName 1.1.4"
           echo "== Launcher diagnostics in dex and resources =="
           unzip -o -q "$APK" classes.dex resources.arsc -d /tmp/apkdex
           if ! strings /tmp/apkdex/classes.dex | grep -q "updateRegistrationStatus"; then
@@ -56,10 +56,10 @@ jobs:
             || ( strings -e l /tmp/apkdex/resources.arsc | grep -q "main_diag_registered" ) \
             || { echo "FAIL: launcher diagnostic strings (main_diag_*) missing from resources" >&2; exit 1; }
           echo "OK: diagnostic resource strings present in resources.arsc"
-          ( strings /tmp/apkdex/resources.arsc | grep -q "Version 1.1.3" ) \
-            || ( strings -e l /tmp/apkdex/resources.arsc | grep -q "Version 1.1.3" ) \
-            || { echo "FAIL: Version 1.1.3 string missing from resources" >&2; exit 1; }
-          echo "OK: Version 1.1.3 string present in resources.arsc"
+          ( strings /tmp/apkdex/resources.arsc | grep -q "Version 1.1.4" ) \
+            || ( strings -e l /tmp/apkdex/resources.arsc | grep -q "Version 1.1.4" ) \
+            || { echo "FAIL: Version 1.1.4 string missing from resources" >&2; exit 1; }
+          echo "OK: Version 1.1.4 string present in resources.arsc"
           echo "== Service registration =="
           "$BT/aapt" dump xmltree "$APK" AndroidManifest.xml | grep -B1 -A10 "^      E: service " | head -20
           echo "== APK size =="
@@ -90,6 +90,16 @@ jobs:
             exit 1
           fi
           echo "OK: shipped method.xml has no KeyboardLayoutSet claim"
+          if ! grep -q "settingsActivity.*\.SettingsActivity" /tmp/method.txt; then
+            echo "FAIL: method.xml is missing android:settingsActivity attribute (.SettingsActivity)" >&2
+            exit 1
+          fi
+          echo "OK: method.xml declares android:settingsActivity=\".SettingsActivity\" directly"
+          if grep -q "android.ime.settingsactivity" /tmp/method.txt; then
+            echo "FAIL: method.xml still contains android.ime.settingsactivity meta-data child" >&2
+            exit 1
+          fi
+          echo "OK: method.xml has no android.ime.settingsactivity meta-data child"
           for needle in "E: input-method" "supportsSwitchingToNextInputMethod" "E: subtype" "imeSubtypeLocale" "languageTag.*en-US" "android:icon"; do
             if ! grep -Eq "$needle" /tmp/method.txt; then
               echo "FAIL: method.xml missing $needle" >&2
@@ -120,6 +130,19 @@ jobs:
             SmartKey Keyboard ${{ github.ref_name }}
 
             Release build of the SmartKey Keyboard Android input method.
+
+            What's new in 1.1.4:
+            - Fixed: on Android 12 (e.g. Hisense E32 Pro), SmartKey was rejected by the
+              InputMethodManager because method.xml declared a settingsActivity via an
+              android.ime.settingsactivity meta-data child inside <input-method>, which
+              OEM IME parsers expect to only contain <subtype> elements. The settings
+              activity is now declared directly with the android:settingsActivity
+              attribute, so SmartKey loads reliably and appears under Settings →
+              On-screen keyboard.
+
+            What's new in 1.1.3:
+            - IME config: removed the unsupported "KeyboardLayoutSet" subtype claim and
+              verified the shipped method.xml structure in CI
 
             What's new in 1.1.2:
             - IME registration repair: removed the unsupported "KeyboardLayoutSet" subtype

@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <input-method xmlns:android="http://schemas.android.com/apk/res/android"
+    android:settingsActivity=".SettingsActivity"
     android:supportsSwitchingToNextInputMethod="true">
-    <meta-data
-        android:name="android.ime.settingsactivity"
-        android:value=".SettingsActivity" />
     <subtype
         android:icon="@mipmap/ic_launcher"
         android:imeSubtypeLocale="en_US"
