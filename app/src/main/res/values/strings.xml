@@ -90,7 +90,7 @@
     <string name="main_diag_secure">In Settings.Secure ENABLED_INPUT_METHODS: %1$s</string>
     <string name="main_privacy_header">Your privacy</string>
     <string name="main_privacy_body">SmartKey Keyboard works completely offline. It has no internet permission, shows no ads, does not track you, and never stores password contents. Typing suggestions, clipboard history, themes and settings all stay on this device.</string>
-    <string name="main_version">Version 1.1.4</string>
+    <string name="main_version">Version 1.1.5</string>
 
     <string name="setting_layout">Keyboard layout</string>
     <string name="setting_numberrow">Number row</string>

@@ -42,9 +42,9 @@ jobs:
           "$BT/aapt" dump badging "$APK" | grep -E "package:|launchable-activity|sdkVersion|targetSdkVersion"
           echo "== Version assertions =="
           "$BT/aapt" dump badging "$APK" > /tmp/badging.txt
-          grep -E "package: name='com.smartkey.keyboard' versionCode='6' versionName='1.1.4'" /tmp/badging.txt \
-            || { echo "FAIL: expected versionCode 6 / versionName 1.1.4" >&2; exit 1; }
-          echo "OK: versionCode 6 / versionName 1.1.4"
+          grep -E "package: name='com.smartkey.keyboard' versionCode='7' versionName='1.1.5'" /tmp/badging.txt \
+            || { echo "FAIL: expected versionCode 7 / versionName 1.1.5" >&2; exit 1; }
+          echo "OK: versionCode 7 / versionName 1.1.5"
           echo "== Launcher diagnostics in dex and resources =="
           unzip -o -q "$APK" classes.dex resources.arsc -d /tmp/apkdex
           if ! strings /tmp/apkdex/classes.dex | grep -q "updateRegistrationStatus"; then
@@ -56,10 +56,10 @@ jobs:
             || ( strings -e l /tmp/apkdex/resources.arsc | grep -q "main_diag_registered" ) \
             || { echo "FAIL: launcher diagnostic strings (main_diag_*) missing from resources" >&2; exit 1; }
           echo "OK: diagnostic resource strings present in resources.arsc"
-          ( strings /tmp/apkdex/resources.arsc | grep -q "Version 1.1.4" ) \
-            || ( strings -e l /tmp/apkdex/resources.arsc | grep -q "Version 1.1.4" ) \
-            || { echo "FAIL: Version 1.1.4 string missing from resources" >&2; exit 1; }
-          echo "OK: Version 1.1.4 string present in resources.arsc"
+          ( strings /tmp/apkdex/resources.arsc | grep -q "Version 1.1.5" ) \
+            || ( strings -e l /tmp/apkdex/resources.arsc | grep -q "Version 1.1.5" ) \
+            || { echo "FAIL: Version 1.1.5 string missing from resources" >&2; exit 1; }
+          echo "OK: Version 1.1.5 string present in resources.arsc"
           echo "== Service registration =="
           "$BT/aapt" dump xmltree "$APK" AndroidManifest.xml | grep -B1 -A10 "^      E: service " | head -20
           echo "== APK size =="
@@ -90,11 +90,16 @@ jobs:
             exit 1
           fi
           echo "OK: shipped method.xml has no KeyboardLayoutSet claim"
-          if ! grep -q "settingsActivity.*\.SettingsActivity" /tmp/method.txt; then
-            echo "FAIL: method.xml is missing android:settingsActivity attribute (.SettingsActivity)" >&2
+          if ! grep -q 'settingsActivity.*"com\.smartkey\.keyboard\.SettingsActivity"' /tmp/method.txt; then
+            echo "FAIL: method.xml android:settingsActivity must be the fully qualified com.smartkey.keyboard.SettingsActivity" >&2
             exit 1
           fi
-          echo "OK: method.xml declares android:settingsActivity=\".SettingsActivity\" directly"
+          echo "OK: method.xml declares android:settingsActivity=\"com.smartkey.keyboard.SettingsActivity\" (fully qualified)"
+          if grep -q 'settingsActivity.*"\.SettingsActivity"' /tmp/method.txt; then
+            echo "FAIL: method.xml android:settingsActivity must not use a package-relative .SettingsActivity" >&2
+            exit 1
+          fi
+          echo "OK: method.xml does not use a package-relative .SettingsActivity value"
           if grep -q "android.ime.settingsactivity" /tmp/method.txt; then
             echo "FAIL: method.xml still contains android.ime.settingsactivity meta-data child" >&2
             exit 1
@@ -130,6 +135,14 @@ jobs:
             SmartKey Keyboard ${{ github.ref_name }}
 
             Release build of the SmartKey Keyboard Android input method.
+
+            What's new in 1.1.5:
+            - Fixed: on Android 12 (e.g. Hisense E32 Pro), tapping the SmartKey settings
+              gear under Settings → On-screen keyboard did nothing. The android:settingsActivity
+              value in method.xml was the package-relative ".SettingsActivity"; Android reads it
+              verbatim and builds an explicit component name without expanding the leading dot,
+              so the settings activity could not resolve. It is now the fully qualified
+              "com.smartkey.keyboard.SettingsActivity", matching what Android 12 Settings expects.
 
             What's new in 1.1.4:
             - Fixed: on Android 12 (e.g. Hisense E32 Pro), SmartKey was rejected by the
